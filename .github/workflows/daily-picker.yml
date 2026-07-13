@@ -78,11 +78,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install app deps (clean install — fix npm optional deps bug)
+      - name: Install app deps
         working-directory: .
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Install scripts deps
         working-directory: ./scripts
@@ -263,18 +261,12 @@ jobs:
         with:
           node-version: '22'
 
-      # Install dependencies. npm has a known bug with optional dependencies
-      # (https://github.com/npm/cli/issues/4828) where platform-specific native
-      # bindings (lightningcss-linux-x64-gnu, @tailwindcss/oxide-linux-x64-gnu)
-      # are not installed correctly if package-lock.json or node_modules already
-      # exist from a previous run/cache.
-      #
-      # Fix: explicitly delete both before `npm install`. This forces a clean
-      # resolution that installs the correct native bindings for the CI platform.
-      - name: Clean install (fix npm optional deps bug)
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install --no-audit --no-fund
+      # Install dependencies. package-lock.json is committed to the repo
+      # and is in sync with package.json (including the platform-specific
+      # optionalDependencies: @tailwindcss/oxide-linux-x64-gnu,
+      # lightningcss-linux-x64-gnu). `npm ci` installs from the lock file.
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: npm run build
