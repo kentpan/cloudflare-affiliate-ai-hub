@@ -4,12 +4,6 @@ on:
   schedule:
     # UTC 00:00 = Beijing 08:00 — daily AI selection run
     - cron: '0 0 * * *'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/daily-picker.yml'
-      - 'scripts/**'
-      - 'web/src/lib/affiliate/**'
   workflow_dispatch:
     inputs:
       date:
@@ -24,6 +18,11 @@ on:
         description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
         required: false
         default: ''
+
+# NOTE: This workflow only generates .data/*.json and commits to main.
+# It does NOT deploy to Cloudflare Pages — CF Pages is deployed separately
+# via CF Git integration (triggered by the .data/ commit to main).
+# The .data/ commit will trigger CF Pages to rebuild and fetch the latest data.
 
 permissions:
   contents: write
@@ -44,13 +43,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install web deps (shared lib)
-        working-directory: ./web
+      - name: Install app deps (shared lib)
+        working-directory: .
         run: npm ci || npm install
 
       - name: Install scripts deps
         working-directory: ./scripts
-        run: npm ci || npm install
+        run: npm install --no-audit --no-fund
 
       - name: Typecheck scripts
         working-directory: ./scripts

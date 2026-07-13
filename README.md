@@ -112,7 +112,20 @@ affiliate-ai-hub/
 
 **重要：Cloudflare Pages 只负责构建前端 + 部署，不需要任何 LLMAI_APIKEY 或联盟 API 密钥！**
 
-选品数据由 GitHub Actions 的 `daily-picker.yml` 生成并提交到 `.data/` 目录。Cloudflare Pages 通过 Git 集成检测到 push 后自动构建前端并部署。
+选品数据由 GitHub Actions 的 `daily-picker.yml` 生成并提交到 `.data/` 目录。Cloudflare Pages 部署的前端通过 GitHub raw URL 直接 fetch `.data/*.json` 获取最新选品数据。
+
+#### 数据读取架构
+
+```
+GitHub Actions (daily-picker.yml)
+  └─ pick job: 生成 .data/{date}/*.json → git commit + push main
+      └─ 无需 LLMAI_APIKEY 时自动用启发式模式
+           ↓
+Cloudflare Pages (edge runtime)
+  └─ API routes 用 fetch() 从 GitHub raw 读取 .data/*.json
+      └─ 配置 NEXT_PUBLIC_GIT_REPO 环境变量指向 GitHub 仓库
+      └─ 数据实时获取，无需重新部署即可看到最新选品
+```
 
 #### 配置步骤
 
@@ -123,12 +136,20 @@ affiliate-ai-hub/
 | 字段 | 值 |
 |------|-----|
 | Framework preset | `Next.js` |
-| Build command | `cd web && npm ci && npm run build` |
-| Build output directory | `web/.next` |
-| Root directory | （留空，advanced） |
-| Environment variables | **不需要任何变量** |
+| Build command | `npx @cloudflare/next-on-pages@1` |
+| Build output directory | `.vercel/output/static` |
+| Root directory | （留空） |
 
-4. 点击 Save and Deploy
+4. **环境变量（关键）**：
+
+| 变量 | 值 | 说明 |
+|------|-----|------|
+| `NEXT_PUBLIC_GIT_REPO` | `你的用户名/affiliate-ai-hub` | GitHub 仓库（owner/repo 格式），用于 fetch .data/*.json |
+
+> 不设置 `NEXT_PUBLIC_GIT_REPO` 时，Cloudflare Pages 会尝试从本地 `/data/` 读取（需要 build 时 cp .data public/data）。
+> 设置后，前端 API routes 会直接从 `https://raw.githubusercontent.com/你的用户名/affiliate-ai-hub/main/.data/` 获取数据。
+
+5. 点击 Save and Deploy
 
 #### 数据流向
 
@@ -141,14 +162,119 @@ GitHub Actions (daily-picker.yml)
       └─ POST 聚合结果到 RECEIVE_URL（如果配置了）
            ↓
 Cloudflare Pages Git 集成
-  └─ 检测到 main 分支 push → 自动构建前端 + 部署
-      └─ 不需要任何 API 密钥（只是 npm build）
+  └─ 检测到 main 分支 push → 自动 npx @cloudflare/next-on-pages@1 构建 + 部署
+      └─ 不需要任何 API 密钥（只是构建前端）
 ```
 
 **关键点**：
 - LLMAI_APIKEY 等密钥只在 GitHub Actions 的 `pick` job 中使用（生成选品数据）
 - Cloudflare Pages 部署不需要任何密钥——它只是用已经生成好的 `.data/` 构建前端
 - GitHub Actions 不主动推送 Cloudflare Pages，只提交 `.data/` 到 main + 推送到 RECEIVE_URL
+
+### 🔍 Google Custom Search JSON API 配置
+
+Google 渠道使用 Programmable Search Engine (CSE) 抓取 Google Shopping 商品。配置步骤：
+
+#### 1. 创建 Programmable Search Engine
+
+访问 https://programmablesearchengine.google.com/ → Create
+
+- **搜索引擎名称**：`选品`
+- **要搜索的网站**：添加以下 50 个 URL（覆盖主流电商/比价/评测网站，最大限度覆盖选品范围）
+
+#### 2. 选品相关 50 个网站 URL
+
+在"选择要搜索的网站"中逐一添加以下 URL：
+
+**综合电商（15 个）**：
+```
+www.amazon.com/*
+www.amazon.co.jp/*
+www.amazon.co.uk/*
+www.amazon.de/*
+www.ebay.com/*
+www.walmart.com/*
+www.target.com/*
+www.bestbuy.com/*
+www.costco.com/*
+www.rakuten.com/*
+www.newegg.com/*
+www.overstock.com/*
+www.wayfair.com/*
+www.etsy.com/*
+www.aliexpress.com/*
+```
+
+**数码电子（8 个）**：
+```
+www.bhphotovideo.com/*
+www.tigerdirect.com/*
+www.samsung.com/*
+www.apple.com/*
+www.dell.com/*
+www.hp.com/*
+www.lenovo.com/*
+www.sony.com/*
+```
+
+**家居厨房（6 个）**：
+```
+www.ikea.com/*
+www.homedepot.com/*
+www.lowes.com/*
+www.bedbathandbeyond.com/*
+www.williams-sonoma.com/*
+www.crateandbarrel.com/*
+```
+
+**美妆个护（5 个）**：
+```
+www.sephora.com/*
+www.ulta.com/*
+www.maccosmetics.com/*
+www.clinique.com/*
+www.kiehls.com/*
+```
+
+**运动户外（4 个）**：
+```
+www.rei.com/*
+www.dickssportinggoods.com/*
+www.basspro.com/*
+www.cabelas.com/*
+```
+
+**比价/评测/趋势（12 个）**：
+```
+www.consumerreports.org/*
+www.cnet.com/*
+www.tomsguide.com/*
+www.techradar.com/*
+www.wirecutter.com/*
+www.trustpilot.com/*
+www.pricegrabber.com/*
+www.shopping.com/*
+www.shopzilla.com/*
+www.pricerunner.com/*
+www.trends.google.com/*
+www.trendhunter.com/*
+```
+
+> ⚠️ 注意：CSE 最多支持 50 个不同域名，以上正好 50 个。如果某个网站不需要可以替换。
+
+#### 3. 获取 API Key 和 CSE ID
+
+- 创建完成后，在 CSE 控制台获取 **搜索引擎 ID**（cx 值，格式类似 `a1b2c3d4e5f6g7h8i`）
+- 访问 https://console.cloud.google.com/apis/credentials → 创建 API Key
+- 将这两个值配置到 GitHub Secrets：
+  - `GOOGLE_API_KEY` = 你的 API Key
+  - `GOOGLE_CSE_ID` = 你的搜索引擎 ID
+
+#### 4. 免费额度
+
+- Google Custom Search JSON API 免费额度：**100 次/天**
+- 超过需付费（$5 per 1000 queries）
+- 每次选品用 3-5 个关键词搜索，建议关键词数量控制在 3 个以内
 
 ### 本地开发
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DATA_DIR = process.env.DATA_DIR ?? path.resolve(__dirname, "..", "..", ".data");
 
-const { seedIfEmpty } = await import("../../web/src/lib/affiliate/seed.js");
+const { seedIfEmpty } = await import("../../src/lib/affiliate/seed.js");
 
 const res = await seedIfEmpty();
 console.log("[scripts] seed result:", res);

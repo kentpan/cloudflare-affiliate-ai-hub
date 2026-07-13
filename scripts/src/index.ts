@@ -15,16 +15,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Resolve .data/ at the monorepo root (affiliate-ai-hub/.data/).
-// This file is at affiliate-ai-hub/scripts/src/index.ts, so ../../.data
+// This file is at affiliate-ai-hub/scripts/src/index.ts, so ../.data
 // resolves to affiliate-ai-hub/.data/.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DATA_DIR = process.env.DATA_DIR ?? path.resolve(__dirname, "..", "..", ".data");
 
-// Reuse the shared affiliate library from the web app.
+// Reuse the shared affiliate library from the app root (src/lib/affiliate/).
 const { generateDaily, ensureDataRoot, todayStr } = await import(
-  "../../web/src/lib/affiliate/generator.js"
+  "../../src/lib/affiliate/generator.js"
 );
-const { seedIfEmpty } = await import("../../web/src/lib/affiliate/seed.js");
+const { seedIfEmpty } = await import("../../src/lib/affiliate/seed.js");
 
 // Parse CLI args
 const args = process.argv.slice(2);

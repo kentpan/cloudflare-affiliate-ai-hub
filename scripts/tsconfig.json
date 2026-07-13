@@ -8,7 +8,27 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "noEmit": true,
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*",
+    "../src/lib/affiliate/types.ts",
+    "../src/lib/affiliate/config.ts",
+    "../src/lib/affiliate/llm-client.ts",
+    "../src/lib/affiliate/analyzer.ts",
+    "../src/lib/affiliate/generator.ts",
+    "../src/lib/affiliate/aggregator.ts",
+    "../src/lib/affiliate/data-writer.ts",
+    "../src/lib/affiliate/customization.ts",
+    "../src/lib/affiliate/seed.ts",
+    "../src/lib/affiliate/comparison.ts",
+    "../src/lib/affiliate/adapters/**/*"
+  ],
+  "exclude": [
+    "../src/lib/affiliate/api-client.ts"
+  ]
 }
