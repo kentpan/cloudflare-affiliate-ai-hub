@@ -1,5 +1,31 @@
 [
   {
+    "timestamp": "2026-07-13T01:26:35.413Z",
+    "date": "2026-07-13",
+    "platforms": {
+      "amazon": {
+        "raw": 30,
+        "picked": 18
+      },
+      "taobao": {
+        "raw": 40,
+        "picked": 24
+      },
+      "jd": {
+        "raw": 35,
+        "picked": 21
+      },
+      "google": {
+        "raw": 25,
+        "picked": 15
+      }
+    },
+    "total": 78,
+    "durationMs": 18,
+    "source": "scheduled",
+    "llmUsed": true
+  },
+  {
     "timestamp": "2026-07-13T01:07:51.646Z",
     "date": "2026-07-12",
     "platforms": {
