@@ -54,10 +54,17 @@ function getBaseUrl(): string {
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
+    // Note: `cache: "no-store"` is not supported in Cloudflare Workers edge
+    // runtime and causes fetch to throw. We omit it — CF Workers doesn't
+    // cache fetch by default.
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`[data-writer] fetch ${url} → HTTP ${res.status}`);
+      return null;
+    }
     return (await res.json()) as T;
-  } catch {
+  } catch (e) {
+    console.warn(`[data-writer] fetch ${url} failed:`, (e as Error).message);
     return null;
   }
 }
