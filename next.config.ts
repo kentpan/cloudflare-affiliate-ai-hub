@@ -1,18 +1,14 @@
 import type { NextConfig } from "next";
 
-// basePath is conditionally enabled for local sandbox dev to avoid asset
-// URL collisions with the main Next.js gateway (port 3000).
+// The affiliate-ai-hub dashboard is now served directly by this single server.
+// No basePath, no proxy — everything runs on port 3000 at the root.
 //
-// - Production (Cloudflare Pages): NEXT_PUBLIC_BASE_PATH is unset → no basePath.
-//   The dashboard is served at `/` directly. Asset URLs are `/_next/...`.
-//
-// - Sandbox dev: NEXT_PUBLIC_BASE_PATH="/affiliate" is set in .env.local.
-//   basePath becomes "/affiliate". Asset URLs are `/affiliate/_next/...`.
-//   The main server's rewrites forward /affiliate/* → localhost:3001/affiliate/*.
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || undefined;
+// The affiliate-ai-hub/ directory is kept as the canonical project source
+// for packaging (tar.gz) and CF Pages deployment. In production (CF Pages),
+// the affiliate app is deployed standalone at the root — same as here.
 
 const nextConfig: NextConfig = {
-  ...(basePath ? { basePath } : {}),
+  output: "standalone",
   typescript: {
     ignoreBuildErrors: true,
   },
