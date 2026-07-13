@@ -5,16 +5,20 @@ on:
     # UTC 00:00 = Beijing 08:00 — daily AI selection run
     - cron: '0 0 * * *'
   workflow_dispatch:
-    # Allow manual trigger with optional date override
+    # Allow manual trigger with optional date / LLM key / use_llm override
     inputs:
       date:
         description: 'Target date (YYYY-MM-DD, default: today)'
         required: false
         default: ''
-      use_llm:
-        description: 'Use LLM for AI analysis (true|false, default: true)'
+      llm_apikey:
+        description: 'LLMAI_APIKEY (leave empty to use the repo Secret or heuristic mode)'
         required: false
-        default: 'true'
+        default: ''
+      use_llm:
+        description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -66,7 +70,8 @@ jobs:
         working-directory: ./scripts
         id: picker
         env:
-          LLMAI_APIKEY: ${{ secrets.LLMAI_APIKEY }}
+          # LLMAI_APIKEY: manual input takes precedence over the repo Secret
+          LLMAI_APIKEY: ${{ github.event.inputs.llm_apikey || secrets.LLMAI_APIKEY }}
           LLMAI_BASE_URL: ${{ secrets.LLMAI_BASE_URL }}
           LLMAI_MODEL: ${{ secrets.LLMAI_MODEL }}
           AMZ_ACCESS_KEY: ${{ secrets.AMZ_ACCESS_KEY }}
@@ -89,26 +94,38 @@ jobs:
           RECEIVE_TOKEN: ${{ secrets.RECEIVE_TOKEN }}
           # Custom date override (workflow_dispatch only)
           PICKER_DATE: ${{ github.event.inputs.date }}
-          # Auto-detect: use LLM only if LLMAI_APIKEY is set; otherwise fall
-          # back to heuristic mode (zero-config — runs without any secrets).
-          # Manual override via workflow_dispatch use_llm input still works.
+          # Manual LLM key input (workflow_dispatch only; takes precedence over Secret)
+          MANUAL_LLM_KEY: ${{ github.event.inputs.llm_apikey }}
+          # Auto-detect: use LLM only if a key is available (manual input or Secret);
+          # otherwise fall back to heuristic mode (zero-config — runs without any secrets).
           USE_LLM_INPUT: ${{ github.event.inputs.use_llm }}
         run: |
           set -euo pipefail
           echo "=== Daily Affiliate AI Picker ==="
           echo "Date: ${PICKER_DATE:-today}"
 
-          # Decide LLM mode: explicit input > auto-detect from secret presence
+          # Effective LLM key = manual input (if provided) else the Secret env var
+          EFFECTIVE_KEY=""
+          if [ -n "${MANUAL_LLM_KEY}" ]; then
+            EFFECTIVE_KEY="${MANUAL_LLM_KEY}"
+            echo "🔑 Using manually-input LLMAI_APIKEY"
+          elif [ -n "${LLMAI_APIKEY}" ]; then
+            EFFECTIVE_KEY="${LLMAI_APIKEY}"
+            echo "🔑 Using LLMAI_APIKEY from repo Secrets"
+          fi
+
+          # Decide LLM mode: explicit use_llm input > auto-detect from key presence
           if [ -n "${USE_LLM_INPUT}" ]; then
             USE_LLM="${USE_LLM_INPUT}"
-          elif [ -n "${LLMAI_APIKEY}" ]; then
+          elif [ -n "${EFFECTIVE_KEY}" ]; then
             USE_LLM="true"
           else
             USE_LLM="false"
           fi
           echo "Use LLM: ${USE_LLM}"
           if [ "${USE_LLM}" = "false" ]; then
-            echo "⚠️  LLMAI_APIKEY not set — using heuristic mode (set the secret to enable AI analysis)"
+            echo "⚠️  No LLMAI_APIKEY provided (manual input or Secret) — using heuristic mode"
+            echo "    Tip: re-run with workflow_dispatch and fill the llm_apikey field, or add the LLMAI_APIKEY repo Secret"
           fi
 
           # Run with optional date + useLlm flags

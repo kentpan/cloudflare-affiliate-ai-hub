@@ -96,7 +96,14 @@ affiliate-ai-hub/
    - **每次 push**：`deploy-pages.yml` 自动构建检查
 5. **无需配置任何 Secrets** — 无 `LLMAI_APIKEY` 时自动用启发式模式生成选品（设置该 Secret 后自动切换为 AI 模式）
 
-> 💡 想启用 AI 智能评分？在仓库 Settings → Secrets → Actions 添加 `LLMAI_APIKEY` 即可，下次运行自动生效。
+> 💡 **手动运行时输入 API Key**：在 Actions → Daily Affiliate AI Picker → Run workflow 时，表单提供 3 个输入：
+> - `Target date`（可选，默认今天）
+> - `LLMAI_APIKEY`（可选，留空则用 repo Secret 或启发式模式）
+> - `Use LLM for AI analysis`（可选，默认自动检测：有 key 则 true）
+>
+> 手动输入的 key 优先于 repo Secret，适合临时测试不同 key 的场景。
+
+> 🔧 **Node 版本**：两个 workflow 均要求 Node ≥ v20（`actions/setup-node@v4` with `node-version: '20'`）。
 
 ### 本地开发
 
