@@ -11,7 +11,6 @@ on:
       - 'scripts/**'
       - 'web/src/lib/affiliate/**'
   workflow_dispatch:
-    # Allow manual trigger with optional date / LLM key / use_llm override
     inputs:
       date:
         description: 'Target date (YYYY-MM-DD, default: today)'
@@ -29,8 +28,6 @@ on:
 permissions:
   contents: write
   actions: read
-  pages: write
-  deployments: write
 
 jobs:
   pick:
@@ -47,8 +44,6 @@ jobs:
         with:
           node-version: '22'
 
-      # Install the web app deps first (the scripts package reuses the shared
-      # affiliate library from ../web/src/lib/affiliate/).
       - name: Install web deps (shared lib)
         working-directory: ./web
         run: npm ci || npm install
@@ -57,7 +52,6 @@ jobs:
         working-directory: ./scripts
         run: npm ci || npm install
 
-      # Typecheck the scripts package (tsx needs to resolve the shared lib)
       - name: Typecheck scripts
         working-directory: ./scripts
         run: |
@@ -65,14 +59,13 @@ jobs:
             npx tsc --noEmit || echo "warn: typecheck skipped (non-blocking)"
           fi
 
-      # Run the AI picker with LLM concurrency-limit retry (3s × 10, configured
-      # in web/src/lib/affiliate/config.ts → config.llmRetry).
-      # The picker writes results to ../.data/{date}/.
+      # Run the AI picker — generates .data/{date}/ + pushes to RECEIVE_URL.
+      # Cloudflare Pages is deployed separately via CF Git integration
+      # (CF auto-detects the .data/ commit and rebuilds the frontend).
       - name: Run AI picker
         working-directory: ./scripts
         id: picker
         env:
-          # LLMAI_APIKEY: manual input takes precedence over the repo Secret
           LLMAI_APIKEY: ${{ github.event.inputs.llm_apikey || secrets.LLMAI_APIKEY }}
           LLMAI_BASE_URL: ${{ secrets.LLMAI_BASE_URL }}
           LLMAI_MODEL: ${{ secrets.LLMAI_MODEL }}
@@ -94,12 +87,8 @@ jobs:
           GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
           RECEIVE_URL: ${{ secrets.RECEIVE_URL }}
           RECEIVE_TOKEN: ${{ secrets.RECEIVE_TOKEN }}
-          # Custom date override (workflow_dispatch only)
           PICKER_DATE: ${{ github.event.inputs.date }}
-          # Manual LLM key input (workflow_dispatch only; takes precedence over Secret)
           MANUAL_LLM_KEY: ${{ github.event.inputs.llm_apikey }}
-          # Auto-detect: use LLM only if a key is available (manual input or Secret);
-          # otherwise fall back to heuristic mode (zero-config — runs without any secrets).
           USE_LLM_INPUT: ${{ github.event.inputs.use_llm }}
         run: |
           set -euo pipefail
@@ -110,10 +99,10 @@ jobs:
           EFFECTIVE_KEY=""
           if [ -n "${MANUAL_LLM_KEY}" ]; then
             EFFECTIVE_KEY="${MANUAL_LLM_KEY}"
-            echo "🔑 Using manually-input LLMAI_APIKEY"
+            echo "Using manually-input LLMAI_APIKEY"
           elif [ -n "${LLMAI_APIKEY}" ]; then
             EFFECTIVE_KEY="${LLMAI_APIKEY}"
-            echo "🔑 Using LLMAI_APIKEY from repo Secrets"
+            echo "Using LLMAI_APIKEY from repo Secrets"
           fi
 
           # Decide LLM mode: explicit use_llm input > auto-detect from key presence
@@ -126,11 +115,9 @@ jobs:
           fi
           echo "Use LLM: ${USE_LLM}"
           if [ "${USE_LLM}" = "false" ]; then
-            echo "⚠️  No LLMAI_APIKEY provided (manual input or Secret) — using heuristic mode"
-            echo "    Tip: re-run with workflow_dispatch and fill the llm_apikey field, or add the LLMAI_APIKEY repo Secret"
+            echo "WARN: No LLMAI_APIKEY provided — using heuristic mode"
           fi
 
-          # Run with optional date + useLlm flags
           ARGS=""
           if [ -n "${PICKER_DATE}" ]; then
             ARGS="${ARGS} --date ${PICKER_DATE}"
@@ -142,68 +129,50 @@ jobs:
           echo "Running: tsx src/index.ts ${ARGS}"
           npx tsx src/index.ts ${ARGS}
 
-          # Verify output exists
           TARGET_DATE="${PICKER_DATE:-$(date -u +%F)}"
           SUMMARY_FILE="../.data/${TARGET_DATE}/summary.json"
           if [ ! -f "${SUMMARY_FILE}" ]; then
-            echo "❌ ERROR: summary.json not generated at ${SUMMARY_FILE}"
+            echo "ERROR: summary.json not generated at ${SUMMARY_FILE}"
             exit 1
           fi
-          echo "✅ summary.json generated"
-          # Extract total count for the step output
+          echo "summary.json generated"
           TOTAL=$(jq -r '.totalCount // 0' "${SUMMARY_FILE}")
           echo "total=${TOTAL}" >> "$GITHUB_OUTPUT"
           echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
-          echo "✅ Total picks: ${TOTAL}"
+          echo "Total picks: ${TOTAL}"
 
-      # Health check: validate the generated data structure
       - name: Health check
         working-directory: ./scripts
         run: |
           set -euo pipefail
           TARGET_DATE="${{ steps.picker.outputs.date }}"
           DATA_DIR="../.data/${TARGET_DATE}"
-          echo "=== Health check for ${TARGET_DATE} ==="
-
-          # Required files
-          REQUIRED_FILES="summary.json amazon.json taobao.json jd.json google.json"
-          for f in ${REQUIRED_FILES}; do
+          echo "Health check for ${TARGET_DATE}"
+          for f in summary.json amazon.json taobao.json jd.json google.json; do
             if [ ! -f "${DATA_DIR}/${f}" ]; then
-              echo "❌ Missing: ${f}"
+              echo "ERROR: Missing ${f}"
               exit 1
             fi
-            echo "✅ ${f} exists"
           done
-
-          # Dimensions
           for d in by-platform by-category by-commission by-price-range; do
             if [ ! -f "${DATA_DIR}/dimensions/${d}.json" ]; then
-              echo "❌ Missing: dimensions/${d}.json"
+              echo "ERROR: Missing dimensions/${d}.json"
               exit 1
             fi
           done
-          echo "✅ All dimension files exist"
-
-          # Index updated
-          if [ ! -f "../.data/index.json" ]; then
-            echo "❌ index.json missing"
-            exit 1
-          fi
-          echo "✅ index.json updated"
-
-          # Summary stats
+          [ -f "../.data/index.json" ] || { echo "ERROR: index.json missing"; exit 1; }
           jq -r '"Total: \(.totalCount) | AvgScore: \(.avgScore) | Revenue: \(.totalExpectedRevenue)"' "${DATA_DIR}/summary.json"
 
-      # Upload .data as artifact (90-day retention for debugging)
       - name: Upload .data artifact
         uses: actions/upload-artifact@v4
         with:
           name: affiliate-data-${{ steps.picker.outputs.date }}
           path: .data/
           retention-days: 90
-          compression-level: 6
 
-      # Commit .data back to repo (triggers Pages rebuild)
+      # Commit .data/ to main. Cloudflare Pages Git integration detects this
+      # push and rebuilds the frontend automatically. The picker also pushes
+      # the aggregated result to RECEIVE_URL (configured in the generator).
       - name: Commit .data
         run: |
           git config user.name "github-actions[bot]"
@@ -212,82 +181,19 @@ jobs:
           git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items)" || echo "no changes to commit"
           git push || echo "push failed (possibly no changes)"
 
-      # Summary in the Actions log
       - name: Summary
         run: |
-          echo "### 🎯 Daily Affiliate AI Picker Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Daily Affiliate AI Picker Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Date**: ${{ steps.picker.outputs.date }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Total picks**: ${{ steps.picker.outputs.total }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **LLM used**: ${{ github.event.inputs.use_llm || 'true' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Artifact**: affiliate-data-${{ steps.picker.outputs.date }} (90-day retention)" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "View full data in the uploaded artifact or the committed \`.data/\` directory." >> "$GITHUB_STEP_SUMMARY"
+          echo "- **RECEIVE_URL**: pushed if configured" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Cloudflare Pages**: rebuilt via Git integration (auto-detected from .data/ commit)" >> "$GITHUB_STEP_SUMMARY"
 
-  # Deploy job — runs AFTER pick completes, builds the web app with the latest
-  # .data/ and deploys to Cloudflare Pages directly (via API token).
-  # This ensures the serial flow: pick → commit .data → build web → deploy.
-  #
-  # IMPORTANT: Cloudflare Pages does NOT need LLMAI_APIKEY or any联盟 API
-  # secrets. The picker (pick job) already generated .data/ — the deploy job
-  # only builds the static frontend with that data and pushes to CF Pages.
-  deploy:
-    runs-on: ubuntu-latest
-    needs: pick
-    if: success()
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Pull the latest .data/ that the pick job just committed
-          ref: main
-          fetch-depth: 1
-
-      - name: Setup Node v22 LTS
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install web deps
-        working-directory: ./web
-        run: npm ci || npm install
-
-      - name: Build web (with latest .data/)
-        working-directory: ./web
-        run: npm run build
-        env:
-          NEXT_TELEMETRY_DISABLED: '1'
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build-${{ needs.pick.outputs.date }}
-          path: web/.next
-          retention-days: 7
-
-      # Deploy to Cloudflare Pages directly via API token.
-      # This is the RECOMMENDED method — no Cloudflare Git integration needed.
-      # The deploy uses wrangler to push the standalone build.
-      - name: Deploy to Cloudflare Pages
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/.next/standalone --project-name=affiliate-ai-hub
-
-      - name: Deploy Summary
-        run: |
-          echo "### 🌐 Deploy Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Build**: ✅ Web built with latest \`.data/${{ needs.pick.outputs.date }}/\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Artifact**: web-build-${{ needs.pick.outputs.date }} (7-day retention)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Cloudflare Pages**: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && '✅ Deployed via wrangler' || '⏭️ Skipped (add CLOUDFLARE_API_TOKEN secret to enable)' }}" >> "$GITHUB_STEP_SUMMARY"
-
-  # Failure notification job — runs if pick fails
   notify-failure:
     runs-on: ubuntu-latest
-    needs: [pick, deploy]
+    needs: [pick]
     if: failure()
     steps:
       - name: Create failure issue
@@ -298,19 +204,18 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 Daily Picker failed — ${date}`,
+              title: `Daily Picker failed — ${date}`,
               body: [
                 `The daily affiliate AI picker workflow failed on ${date}.`,
                 ``,
                 `[View failed run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
                 ``,
                 `**Common causes:**`,
-                `- LLM concurrency limit (retry 3s × 10 already configured)`,
-                `- Missing GitHub Secrets (LLMAI_APIKEY required)`,
-                `-联盟 API credentials expired`,
+                `- LLM concurrency limit (retry 3s x 10 already configured)`,
+                `- Missing GitHub Secrets (LLMAI_APIKEY required for AI mode)`,
+                `- Affiliate API credentials expired`,
                 ``,
                 `Please check the workflow logs and re-run manually after fixing.`,
               ].join('\n'),
               labels: ['bug', 'auto-generated', 'daily-picker']
             });
-            console.log('Failure issue created');
