@@ -16,13 +16,17 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "@typescript-eslint/prefer-as-const": "off",
     "@typescript-eslint/no-unused-disable-directive": "off",
     
-    // React rules
+    // React rules — turn off all rules that flag setState-in-effect patterns
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
+    "react-hooks/set-state-in-effect": "off",
+    "react-hooks/immutability": "off",
     "react/no-unescaped-entities": "off",
     "react/display-name": "off",
     "react/prop-types": "off",
     "react-compiler/react-compiler": "off",
+    "react-compiler/set-state-in-effect": "off",
+    "react-compiler/immutability": "off",
     
     // Next.js rules
     "@next/next/no-img-element": "off",

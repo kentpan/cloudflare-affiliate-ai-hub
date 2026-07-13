@@ -31,23 +31,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
       - name: Install deps
         working-directory: ./web
-        run: bun install --frozen-lockfile || bun install
+        run: npm ci || npm install
 
       - name: Lint
         working-directory: ./web
-        run: 'bun run lint || echo "warn: lint non-blocking"'
+        run: 'npm run lint || echo "warn: lint non-blocking"'
 
       - name: Build web
         working-directory: ./web
-        run: bun run build
+        run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: '1'
 

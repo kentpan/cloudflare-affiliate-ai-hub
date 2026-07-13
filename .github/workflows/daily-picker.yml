@@ -39,23 +39,17 @@ jobs:
             web/package-lock.json
             scripts/package-lock.json
 
-      # Install Bun (faster than npm for this monorepo)
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       # Install the web app deps first (the scripts package reuses the shared
       # affiliate library from ../web/src/lib/affiliate/).
       - name: Install web deps (shared lib)
         working-directory: ./web
-        run: bun install --frozen-lockfile || bun install
+        run: npm ci || npm install
 
       - name: Install scripts deps
         working-directory: ./scripts
-        run: bun install --frozen-lockfile || bun install
+        run: npm ci || npm install
 
-      # Build the scripts package (tsx needs to resolve the shared lib)
+      # Typecheck the scripts package (tsx needs to resolve the shared lib)
       - name: Typecheck scripts
         working-directory: ./scripts
         run: |
