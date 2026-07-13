@@ -1,0 +1,63 @@
+name: Deploy Web (build check)
+
+# Build check workflow — runs on every push to main to verify the web app
+# compiles. Primary deployment should be via Vercel/Cloudflare Pages Git
+# integration (auto-detected, no config needed).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.data/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        working-directory: ./web
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Lint
+        working-directory: ./web
+        run: 'bun run lint || echo "warn: lint non-blocking"'
+
+      - name: Build web
+        working-directory: ./web
+        run: bun run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: web/.next
+          retention-days: 7
+
+      - name: Summary
+        run: |
+          echo "### 🌐 Web Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: ✅ Build successful" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Artifact**: web-build (7-day retention)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "To deploy: connect this repo to Vercel or Cloudflare Pages (auto-detects Next.js, zero config)." >> "$GITHUB_STEP_SUMMARY"

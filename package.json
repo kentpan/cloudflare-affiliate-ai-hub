@@ -1,0 +1,20 @@
+{
+  "name": "affiliate-ai-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "联盟 AI 自动选品与分发系统 — 多平台联盟营销 AI 智能选品、种草文案生成与多维度聚合分析。",
+  "workspaces": [
+    "web",
+    "scripts"
+  ],
+  "scripts": {
+    "dev": "cd web && next dev -p 3000",
+    "build": "cd web && next build",
+    "start": "cd web && next start -p 3000",
+    "lint": "cd web && eslint .",
+    "picker": "cd scripts && tsx src/index.ts",
+    "seed": "cd scripts && tsx src/seed.ts",
+    "db:push": "cd web && prisma db push",
+    "db:generate": "cd web && prisma generate"
+  }
+}

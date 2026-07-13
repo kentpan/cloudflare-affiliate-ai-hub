@@ -1,0 +1,37 @@
+{
+  "updatedAt": "2026-07-12T23:57:41.324Z",
+  "dates": [
+    "2026-07-12",
+    "2026-07-11",
+    "2026-07-10"
+  ],
+  "platforms": [
+    "amazon",
+    "taobao",
+    "jd",
+    "google"
+  ],
+  "totals": {
+    "2026-07-10": {
+      "amazon": 18,
+      "taobao": 24,
+      "jd": 21,
+      "google": 15,
+      "total": 78
+    },
+    "2026-07-11": {
+      "amazon": 18,
+      "taobao": 24,
+      "jd": 21,
+      "google": 15,
+      "total": 78
+    },
+    "2026-07-12": {
+      "amazon": 18,
+      "taobao": 24,
+      "jd": 21,
+      "google": 15,
+      "total": 78
+    }
+  }
+}
