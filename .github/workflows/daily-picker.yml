@@ -33,11 +33,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
-            web/package-lock.json
-            scripts/package-lock.json
+            web/package.json
+            scripts/package.json
 
       # Install the web app deps first (the scripts package reuses the shared
       # affiliate library from ../web/src/lib/affiliate/).

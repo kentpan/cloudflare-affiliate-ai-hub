@@ -103,7 +103,7 @@ affiliate-ai-hub/
 >
 > 手动输入的 key 优先于 repo Secret，适合临时测试不同 key 的场景。
 
-> 🔧 **Node 版本**：两个 workflow 均要求 Node ≥ v20（`actions/setup-node@v4` with `node-version: '20'`）。
+> 🔧 **Node 版本**：两个 workflow 使用 Node v22 LTS（满足 ≥ v20 要求，避免 GitHub Actions Node 20 弃用警告）。
 
 ### 本地开发
 
