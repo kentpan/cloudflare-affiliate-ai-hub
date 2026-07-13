@@ -62,7 +62,9 @@ export class GoogleAdapter implements IAdapter {
     const catalog = pool.length ? pool : MOCK_CATALOG;
     for (let i = 0; i < count; i++) {
       const seed = pickRandom(catalog);
-      const price = Math.round(seed.basePrice * randInRange([1.1, 1.6]) * 100) / 100;
+      // Google Shopping prices are in USD. The shared MOCK_CATALOG uses
+      // CNY-like base prices, so we apply a rough CNY→USD conversion (~÷7.2).
+      const price = Math.round((seed.basePrice / 7.2) * randInRange([1.1, 1.6]) * 100) / 100;
       const commission = randInRange([3, 7]);
       out.push({
         id: `gg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,

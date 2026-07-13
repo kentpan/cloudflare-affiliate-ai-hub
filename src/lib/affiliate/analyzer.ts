@@ -5,7 +5,7 @@
 // Implements the user's concurrency-limit retry policy via chatJSON.
 
 import { chatJSON } from "./llm-client";
-import type { PickedProduct, RawProduct } from "./types";
+import { currencySymbol, type PickedProduct, RawProduct } from "./types";
 
 const SYSTEM_PROMPT = `你是资深联盟营销选品专家，擅长从海量商品中挑选高佣金、高转化、适合推广的爆款。
 输入为各平台当日抓取的候选商品（JSON 数组），请输出严格 JSON：
@@ -117,7 +117,7 @@ export function heuristicFallback(raw: RawProduct[]): PickedProduct[] {
         ...p,
         score,
         expectedRevenue,
-        aiCopy: `爆款推荐｜${p.category}好物，佣金${p.commissionRate}%，预期收益¥${expectedRevenue}`,
+        aiCopy: `爆款推荐｜${p.category}好物，佣金${p.commissionRate}%，预期收益${currencySymbol(p.platform)}${expectedRevenue}`,
         aiTags: [p.platform, p.category, p.couponAmount ? "有券" : "热销", "精选"],
         reason: `高佣金+${p.salesVolume ?? 0}销量，转化预期佳`,
       } as PickedProduct;

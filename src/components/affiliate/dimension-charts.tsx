@@ -26,6 +26,10 @@ import {
   type Platform,
 } from "@/lib/affiliate/types";
 
+// Revenue across platforms uses mixed currencies ($ for amazon/google, ¥ for taobao/jd).
+// In aggregate charts we label revenue with a generic prefix to avoid implying a single currency.
+const REV_PREFIX = "≈";
+
 interface DimensionChartsProps {
   byPlatform?: DimensionFile | null;
   byCategory?: DimensionFile | null;
@@ -142,7 +146,7 @@ function PlatformBar({
           }}
           formatter={(value: number, name: string) => {
             if (name === "count") return [`${value} 件`, "商品数"];
-            if (name === "revenue") return [`¥${value}`, "预期收益"];
+            if (name === "revenue") return [`${REV_PREFIX}${value}`, "预期收益"];
             return [value, name];
           }}
         />
@@ -188,7 +192,7 @@ function CategoryBar({
             fontSize: 12,
           }}
           formatter={(value: number, name: string) =>
-            name === "revenue" ? [`¥${value}`, "预期收益"] : [value, name]
+            name === "revenue" ? [`${REV_PREFIX}${value}`, "预期收益"] : [value, name]
           }
         />
         <Bar dataKey="revenue" radius={[0, 6, 6, 0]} name="revenue">
@@ -240,7 +244,7 @@ function CommissionPie({
             fontSize: 12,
           }}
           formatter={(value: number, _name: string, entry: any) => [
-            `${value} 件 · ¥${entry.payload.revenue}`,
+            `${value} 件 · ${REV_PREFIX}${entry.payload.revenue}`,
             entry.payload.name,
           ]}
         />
@@ -259,7 +263,7 @@ function PricePie({
     (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
   );
   const chartData = sorted.map((g) => ({
-    name: `¥${g.key}`,
+    name: `${REV_PREFIX}${g.key}`,
     value: g.count,
     revenue: g.expectedRevenue,
   }));
@@ -288,7 +292,7 @@ function PricePie({
             fontSize: 12,
           }}
           formatter={(value: number, _name: string, entry: any) => [
-            `${value} 件 · ¥${entry.payload.revenue}`,
+            `${value} 件 · ${REV_PREFIX}${entry.payload.revenue}`,
             entry.payload.name,
           ]}
         />

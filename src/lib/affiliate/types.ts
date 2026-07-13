@@ -19,6 +19,40 @@ export const PLATFORM_COLORS: Record<Platform, string> = {
   google: "#4285f4",
 };
 
+// Currency symbol per platform.
+// Amazon & Google are international platforms priced in USD ($).
+// 淘宝客 & 京东 are Chinese platforms priced in CNY (¥).
+export const PLATFORM_CURRENCY: Record<Platform, string> = {
+  amazon: "$",
+  taobao: "¥",
+  jd: "¥",
+  google: "$",
+};
+
+/**
+ * Format a monetary amount with the platform's currency symbol.
+ * Usage: `{formatPrice(product.price, product.platform)}`
+ */
+export function formatPrice(amount: number, platform: Platform): string {
+  const symbol = PLATFORM_CURRENCY[platform] ?? "¥";
+  return `${symbol}${amount.toFixed(2)}`;
+}
+
+/**
+ * Format revenue (commission * price) — inherits the platform's currency.
+ */
+export function formatRevenue(amount: number, platform: Platform): string {
+  const symbol = PLATFORM_CURRENCY[platform] ?? "¥";
+  return `${symbol}${amount.toFixed(2)}`;
+}
+
+/**
+ * Get the currency symbol for a platform (for inline JSX usage).
+ */
+export function currencySymbol(platform: Platform): string {
+  return PLATFORM_CURRENCY[platform] ?? "¥";
+}
+
 export interface RawProduct {
   id: string;
   platform: Platform;

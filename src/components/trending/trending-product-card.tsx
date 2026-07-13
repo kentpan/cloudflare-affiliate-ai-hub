@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   PLATFORM_COLORS,
   PLATFORM_LABELS,
+  currencySymbol,
   type PickedProduct,
 } from "@/lib/affiliate/types";
 import type { ProductComparison } from "@/lib/affiliate/comparison";
@@ -159,7 +160,7 @@ export function TrendingProductCard({
           <div>
             <div className="flex items-baseline gap-1">
               <span className="text-base font-bold text-rose-600">
-                ¥{product.price.toFixed(0)}
+                {currencySymbol(product.platform)}{product.price.toFixed(0)}
               </span>
               {discount > 0 && (
                 <Badge variant="destructive" className="h-4 px-1 text-[9px]">
@@ -168,7 +169,7 @@ export function TrendingProductCard({
               )}
             </div>
             <div className="text-[10px] text-emerald-600">
-              收益 ¥{product.expectedRevenue.toFixed(1)} · {product.commissionRate}%
+              收益 {currencySymbol(product.platform)}{product.expectedRevenue.toFixed(1)} · {product.commissionRate}%
             </div>
           </div>
           <div className="flex w-16 flex-col items-end gap-0.5">

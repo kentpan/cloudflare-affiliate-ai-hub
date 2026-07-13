@@ -1,13 +1,17 @@
-// GET /api/credentials — list credential keys + masked values
-
-export const runtime = "edge";
-// PUT /api/credentials — update credentials (not supported on edge)
+// GET  /api/credentials — list credential keys + masked values + env info
+// PUT  /api/credentials — write credentials to the appropriate backend:
+//                          cloudflare → CF Pages API (env vars)
+//                          github-actions → GitHub API (Actions secrets, encrypted)
+//                          local → .env file (gitignored)
+//                        Always returns masked values — never plaintext.
 //
-// On Cloudflare Pages (edge runtime), credentials are managed via
-// GitHub Secrets / Cloudflare environment variables, not via this API.
+// Uses Node.js runtime (not edge) because local-dev mode needs fs to write .env.
+
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-
+import { getEnvInfo } from "@/lib/affiliate/env";
+import { maskValue, writeCredentials } from "@/lib/affiliate/credential-writer";
 
 const CREDENTIAL_KEYS = [
   { key: "LLMAI_APIKEY", label: "AI 推理密钥", group: "AI 推理", required: true, mask: true },
@@ -29,20 +33,68 @@ const CREDENTIAL_KEYS = [
 ];
 
 export async function GET() {
+  const envInfo = getEnvInfo();
   const credentials = CREDENTIAL_KEYS.map((def) => {
     const value = process.env[def.key] ?? "";
     return {
       ...def,
       isSet: Boolean(value),
-      maskedValue: def.mask && value ? value.slice(0, 4) + "•".repeat(8) + value.slice(-4) : value,
+      // Always mask — never return plaintext to the client
+      maskedValue: def.mask && value
+        ? maskValue(value)
+        : def.mask
+          ? ""
+          : value, // non-secret values (URLs, model names) shown as-is
     };
   });
-  return NextResponse.json({ credentials, envLocalExists: false });
+  return NextResponse.json({ credentials, envInfo });
 }
 
-export async function PUT() {
+export async function PUT(request: Request) {
+  const envInfo = getEnvInfo();
+
+  if (!envInfo.writable) {
+    return NextResponse.json({
+      ok: false,
+      error: `当前环境 (${envInfo.label}) 缺少配置: ${envInfo.missingConfig.join(", ")}`,
+      envInfo,
+    }, { status: 400 });
+  }
+
+  let body: Record<string, string>;
+  try {
+    body = await request.json() as Record<string, string>;
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  // Convert to entries, filtering to known keys only (security: don't allow
+  // arbitrary env var writes)
+  const knownKeys = new Set(CREDENTIAL_KEYS.map((k) => k.key));
+  const entries = Object.entries(body)
+    .filter(([key]) => knownKeys.has(key))
+    .map(([key, value]) => ({ key, value: String(value ?? "") }));
+
+  if (entries.length === 0) {
+    return NextResponse.json({ ok: false, error: "No valid credentials provided" }, { status: 400 });
+  }
+
+  const { results, errors } = await writeCredentials(entries);
+
+  // Build response — always masked
+  const updated = results.map((r) => ({
+    key: r.key,
+    stored: r.stored,
+    maskedValue: r.maskedValue,
+  }));
+
   return NextResponse.json({
-    ok: false,
-    error: "Credential updates not supported on edge runtime. Use GitHub Secrets or Cloudflare environment variables.",
-  }, { status: 405 });
+    ok: errors.length === 0,
+    message: `已写入 ${results.length} 项凭证到 ${envInfo.store}`,
+    updatedCount: results.length,
+    errorCount: errors.length,
+    updated,
+    errors,
+    envInfo,
+  });
 }

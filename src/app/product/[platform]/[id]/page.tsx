@@ -9,7 +9,7 @@ import Link from "next/link";
 import { config } from "@/lib/affiliate/config";
 import { listDates, readJson } from "@/lib/affiliate/data-writer";
 import type { DailySummary, PickedProduct, Platform } from "@/lib/affiliate/types";
-import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/affiliate/types";
+import { PLATFORM_LABELS, PLATFORM_COLORS, currencySymbol } from "@/lib/affiliate/types";
 import { ArrowLeft, ExternalLink, Star, Users, Tag, Ticket, Store, Sparkles, Lightbulb, TrendingUp, Cloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -101,11 +101,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {/* Price */}
             <div className="rounded-lg border p-3">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-rose-600">¥{product.price.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-rose-600">{currencySymbol(product.platform)}{product.price.toFixed(2)}</span>
                 {product.originalPrice && product.originalPrice > product.price && (
                   <>
                     <span className="text-sm text-muted-foreground line-through">
-                      ¥{product.originalPrice.toFixed(2)}
+                      {currencySymbol(product.platform)}{product.originalPrice.toFixed(2)}
                     </span>
                     <Badge variant="destructive">-{discount}%</Badge>
                   </>
@@ -113,7 +113,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
               <div className="mt-1 flex items-center gap-1 text-sm font-medium text-emerald-600">
                 <TrendingUp className="h-4 w-4" />
-                预期收益 ¥{product.expectedRevenue.toFixed(2)}
+                预期收益 {currencySymbol(product.platform)}{product.expectedRevenue.toFixed(2)}
                 <span className="text-xs text-muted-foreground">(佣金 {product.commissionRate}%)</span>
               </div>
             </div>
@@ -123,7 +123,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <MetricBox icon={<Star className="h-4 w-4 text-amber-500" />} label="评分" value={product.rating ? product.rating.toFixed(1) : "-"} />
               <MetricBox icon={<Users className="h-4 w-4 text-cyan-500" />} label="销量" value={product.salesVolume ? product.salesVolume.toLocaleString() : "-"} />
               <MetricBox icon={<Tag className="h-4 w-4 text-teal-500" />} label="评价数" value={product.reviewCount ? product.reviewCount.toLocaleString() : "-"} />
-              <MetricBox icon={<Ticket className="h-4 w-4 text-rose-500" />} label="优惠券" value={product.couponAmount ? `¥${product.couponAmount}` : "无"} />
+              <MetricBox icon={<Ticket className="h-4 w-4 text-rose-500" />} label="优惠券" value={product.couponAmount ? `${currencySymbol(product.platform)}${product.couponAmount}` : "无"} />
             </div>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">

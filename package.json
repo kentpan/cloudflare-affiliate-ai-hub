@@ -1,6 +1,6 @@
 {
   "name": "affiliate-ai-hub-web",
-  "version": "6.2.0",
+  "version": "6.4.0",
   "private": true,
   "description": "联盟 AI 选品中心 — Next.js 16 dashboard for the Affiliate AI Hub monorepo.",
   "scripts": {
@@ -56,6 +56,8 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
     "input-otp": "^1.4.2",
+    "libsodium-wrappers": "^0.8.4",
+    "libsodium-wrappers-sumo": "^0.8.4",
     "lucide-react": "^0.525.0",
     "next": "^16.1.1",
     "next-auth": "^4.24.11",
@@ -74,6 +76,7 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tweetsodium": "^0.0.6",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
     "z-ai-web-dev-sdk": "^0.0.18",

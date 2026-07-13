@@ -176,7 +176,7 @@ export function SankeyDiagram({ data }: SankeyDiagramProps) {
             strokeWidth={Math.max(3, p!.h)}
             strokeLinecap="round"
           >
-            <title>{`${p!.name}: ${p!.value}件 · ¥${p!.revenue} · 均分${p!.avgScore}`}</title>
+            <title>{`${p!.name}: ${p!.value}件 · ≈${p!.revenue} (多币种合计) · 均分${p!.avgScore}`}</title>
           </path>
         ))}
       </svg>

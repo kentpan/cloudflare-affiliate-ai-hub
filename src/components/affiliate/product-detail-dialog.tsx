@@ -24,6 +24,7 @@ import {
 import {
   PLATFORM_COLORS,
   PLATFORM_LABELS,
+  currencySymbol,
   type PickedProduct,
 } from "@/lib/affiliate/types";
 
@@ -105,12 +106,12 @@ function DetailBody({ product }: { product: PickedProduct }) {
           <div className="rounded-lg border p-3">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-rose-600">
-                ¥{product.price.toFixed(2)}
+                {currencySymbol(product.platform)}{product.price.toFixed(2)}
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <>
                   <span className="text-sm text-muted-foreground line-through">
-                    ¥{product.originalPrice.toFixed(2)}
+                    {currencySymbol(product.platform)}{product.originalPrice.toFixed(2)}
                   </span>
                   <Badge variant="destructive" className="text-xs">
                     -{discount}%
@@ -120,7 +121,7 @@ function DetailBody({ product }: { product: PickedProduct }) {
             </div>
             <div className="mt-1 flex items-center gap-1 text-sm font-medium text-emerald-600">
               <TrendingUp className="h-4 w-4" />
-              预期收益 ¥{product.expectedRevenue.toFixed(2)}
+              预期收益 {currencySymbol(product.platform)}{product.expectedRevenue.toFixed(2)}
               <span className="text-xs text-muted-foreground">
                 (佣金 {product.commissionRate}%)
               </span>
@@ -147,7 +148,7 @@ function DetailBody({ product }: { product: PickedProduct }) {
             <MetricBox
               icon={<Ticket className="h-4 w-4 text-rose-500" />}
               label="优惠券"
-              value={product.couponAmount ? `¥${product.couponAmount}` : "无"}
+              value={product.couponAmount ? `${currencySymbol(product.platform)}${product.couponAmount}` : "无"}
             />
           </div>
 

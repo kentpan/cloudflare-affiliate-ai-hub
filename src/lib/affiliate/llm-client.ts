@@ -17,7 +17,14 @@ async function getZAI(): Promise<ZAI> {
     throw new Error("LLMAI_APIKEY not configured — falling back to heuristic");
   }
   if (!zaiSingleton) {
-    zaiSingleton = await ZAI.create();
+    // Construct ZAI directly from the in-memory config instead of calling
+    // ZAI.create() (which reads from a .z-ai-config file on disk). This lets
+    // the API key live purely in process.env / memory — no file persistence
+    // required, which is critical for sandbox testing with temporary keys.
+    zaiSingleton = new ZAI({
+      baseUrl: config.llm.baseURL,
+      apiKey: config.llm.apiKey,
+    });
   }
   return zaiSingleton;
 }

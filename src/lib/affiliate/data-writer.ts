@@ -18,9 +18,6 @@ const GITHUB_RAW_BASE = process.env.NEXT_PUBLIC_DATA_URL ||
 // Local dev fallback: /data/ (static files from public/data/)
 const LOCAL_DATA_BASE = "/data";
 
-// User timezone for "today" computation (auto-switch to current day's data)
-const USER_TZ = "Asia/Shanghai";
-
 function isLocalDev(): boolean {
   // In local dev, there's no NEXT_PUBLIC_DATA_URL or NEXT_PUBLIC_GIT_REPO
   // and we're running on localhost
@@ -59,24 +56,21 @@ export async function readJson<T = unknown>(...segments: string[]): Promise<T | 
 }
 
 /**
- * Returns today's date as YYYY-MM-DD in the user's timezone (Asia/Shanghai).
- * The remote .data/ folder uses Shanghai-local day folders, so we must
- * compute "today" the same way to auto-switch to the latest available day.
+ * Returns today's date as YYYY-MM-DD in **UTC** (ISO 8601 calendar date).
+ *
+ * This MUST stay in sync with the GitHub Actions `daily-picker.yml` workflow,
+ * which runs on the `0 0 * * *` UTC cron schedule and stamps data folders
+ * with `date -u +%F` (also UTC). Using a local timezone here would cause a
+ * mismatch: e.g. at UTC 23:00 on July 14 (= Beijing 07:00 on July 15) a
+ * Shanghai-based "today" would probe `2026-07-15/summary.json` which doesn't
+ * exist yet (the picker won't run until UTC 00:00 on July 15), and the
+ * dashboard would silently fall back to yesterday's data.
+ *
+ * By computing "today" the same way the picker does (UTC), we guarantee the
+ * probe targets the correct folder.
  */
-function todayShanghai(): string {
-  try {
-    const fmt = new Intl.DateTimeFormat("en-CA", {
-      timeZone: USER_TZ,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    // en-CA => "YYYY-MM-DD" natively
-    return fmt.format(new Date());
-  } catch {
-    // Fallback: UTC date
-    return new Date().toISOString().slice(0, 10);
-  }
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 interface IndexShape {
@@ -110,7 +104,7 @@ async function fetchIndex(): Promise<IndexShape | null> {
  *
  * Auto-switch behaviour for "today's latest data":
  * 1. Read index.json from GitHub raw.
- * 2. Compute today's date in Asia/Shanghai.
+ * 2. Compute today's date in **UTC** (matching the picker's `date -u +%F`).
  * 3. If today is NOT in the index (index.json may lag behind the actual
  *    published files), probe `<today>/summary.json` directly. If it exists,
  *    prepend today to the returned list so the dashboard picks it up.
@@ -128,8 +122,9 @@ export async function listDates(): Promise<string[]> {
     out.push(d);
   };
 
-  // Auto-switch: ensure today's data is considered even if index.json is stale
-  const today = todayShanghai();
+  // Auto-switch: ensure today's data is considered even if index.json is stale.
+  // Uses UTC to match the GitHub Actions daily-picker cron schedule.
+  const today = todayUTC();
   if (!dates.includes(today)) {
     const probe = await readJson<{ date?: string }>(today, "summary.json");
     if (probe) {

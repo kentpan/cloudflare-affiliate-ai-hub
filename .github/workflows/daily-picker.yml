@@ -1,5 +1,30 @@
 name: Daily Affiliate AI Picker
 
+# NOTE: This workflow has TWO jobs:
+#   1. `pick`   — runs on schedule + workflow_dispatch. Generates .data/*.json
+#                  and commits to main. The commit touches ONLY .data/ files.
+#   2. `deploy` — runs on `push` to main, BUT only when the push includes
+#                  non-.data files (via `paths-ignore`). This is the deploy
+#                  trigger for Cloudflare Pages.
+#
+# === Path-based CF Pages trigger filtering ===
+# The `push` trigger below uses `paths-ignore: ['.data/**']` so that the
+# `deploy` job does NOT run when the daily picker commits .data/*.json.
+# It ONLY runs when you push code/config changes (non-.data files).
+#
+# IMPORTANT: For this to actually control CF Pages deployments, you MUST
+# disable Cloudflare Pages' automatic git integration in the CF dashboard
+# (Settings → Builds & deployments → Disable automatic deployments).
+# Otherwise CF Pages will STILL rebuild on every .data/ commit regardless
+# of this workflow. Once git integration is disabled, this `deploy` job
+# (using wrangler) becomes the sole deploy mechanism.
+#
+# Required repo Secrets for the deploy job:
+#   CLOUDFLARE_API_TOKEN  — API token with Pages:Edit permission
+#   CLOUDFLARE_ACCOUNT_ID — Cloudflare account ID
+# And a repo Variable:
+#   CLOUDFLARE_PAGES_PROJECT — Pages project name (e.g. "affiliate-ai-hub")
+
 on:
   schedule:
     # UTC 00:00 = Beijing 08:00 — daily AI selection run
@@ -18,18 +43,28 @@ on:
         description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
         required: false
         default: ''
-
-# NOTE: This workflow only generates .data/*.json and commits to main.
-# It does NOT deploy to Cloudflare Pages — CF Pages is deployed separately
-# via CF Git integration (triggered by the .data/ commit to main).
-# The .data/ commit will trigger CF Pages to rebuild and fetch the latest data.
+  push:
+    branches: [main]
+    # Only trigger the deploy job when non-.data files change.
+    # .data/*.json commits (from the pick job) are ignored.
+    # NOTE: we do NOT ignore '**/*.json' globally — that would also skip
+    # deploys when package.json / tsconfig.json change.
+    paths-ignore:
+      - '.data/**'
 
 permissions:
   contents: write
   actions: read
 
+concurrency:
+  group: affiliate-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pick:
+    # Only run the picker on schedule or manual dispatch — NOT on push.
+    # Push events are handled by the `deploy` job below.
+    if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -169,15 +204,16 @@ jobs:
           path: .data/
           retention-days: 90
 
-      # Commit .data/ to main. Cloudflare Pages Git integration detects this
-      # push and rebuilds the frontend automatically. The picker also pushes
-      # the aggregated result to RECEIVE_URL (configured in the generator).
+      # Commit .data/ to main. This commit touches ONLY .data/** files, so
+      # the `push` trigger's `paths-ignore: ['.data/**']` filter will prevent
+      # the `deploy` job from running. CF Pages (if git integration is
+      # disabled per the workflow header instructions) will also NOT rebuild.
       - name: Commit .data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .data/
-          git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items)" || echo "no changes to commit"
+          git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items) [skip deploy]" || echo "no changes to commit"
           git push || echo "push failed (possibly no changes)"
 
       - name: Summary
@@ -188,12 +224,78 @@ jobs:
           echo "- **Total picks**: ${{ steps.picker.outputs.total }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Artifact**: affiliate-data-${{ steps.picker.outputs.date }} (90-day retention)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **RECEIVE_URL**: pushed if configured" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Cloudflare Pages**: rebuilt via Git integration (auto-detected from .data/ commit)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Deploy**: skipped (.data/** commits excluded by paths-ignore)" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Deploy job — runs ONLY on push events where non-.data files changed.
+  # This is the path-filtered Cloudflare Pages deploy mechanism.
+  #
+  # Prerequisite: Disable CF Pages automatic git integration in the CF
+  # dashboard, otherwise CF Pages will still rebuild on every .data/ commit
+  # regardless of this paths-ignore filter.
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if CF Pages secrets are configured
+        id: cf_check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          if [ -n "${CF_TOKEN}" ] && [ -n "${CF_ACCOUNT}" ] && [ -n "${CF_PROJECT}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "✓ CF Pages secrets configured — will deploy to project: ${CF_PROJECT}"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "⚠ CF Pages secrets not configured — skipping deploy (build only)"
+          fi
+
+      - name: Setup Node v22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_GIT_REPO: ${{ github.repository }}
+          NEXT_PUBLIC_DATA_URL: https://raw.githubusercontent.com/${{ github.repository }}/main
+
+      - name: Build for Cloudflare Pages
+        if: ${{ steps.cf_check.outputs.configured == 'true' }}
+        run: npx @cloudflare/next-on-pages@1
+
+      - name: Deploy to Cloudflare Pages
+        if: ${{ steps.cf_check.outputs.configured == 'true' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .vercel/output/static --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+
+      - name: Deploy Summary
+        if: ${{ always() }}
+        run: |
+          echo "### Deploy Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Trigger**: push to ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit**: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **CF Pages deploy**: ${{ steps.cf_check.outputs.configured == 'true' && '✓ deployed' || '⤵ skipped (secrets not configured, build-only)' }}" >> "$GITHUB_STEP_SUMMARY"
 
   notify-failure:
     runs-on: ubuntu-latest
     needs: [pick]
-    if: failure()
+    if: ${{ failure() }}
     steps:
       - name: Create failure issue
         uses: actions/github-script@v7

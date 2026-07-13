@@ -7,7 +7,7 @@ export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { readJson, listDates } from "@/lib/affiliate/data-writer";
 import type { DailySummary, PickedProduct, PLATFORM_LABELS } from "@/lib/affiliate/types";
-import { PLATFORM_LABELS as PL } from "@/lib/affiliate/types";
+import { PLATFORM_LABELS as PL, currencySymbol } from "@/lib/affiliate/types";
 
 
 export async function GET(request: Request) {
@@ -128,7 +128,7 @@ function toMarkdown(
   lines.push(`# 联盟 AI 选品 · ${date}`);
   lines.push("");
   lines.push(`> 生成时间：${new Date(summary.generatedAt).toLocaleString("zh-CN")}`);
-  lines.push(`> 商品总数：${summary.totalCount} ｜ 平均评分：${summary.avgScore?.toFixed(1)} ｜ 预期总收益：¥${summary.totalExpectedRevenue?.toFixed(2)}`);
+  lines.push(`> 商品总数：${summary.totalCount} ｜ 平均评分：${summary.avgScore?.toFixed(1)} ｜ 预期总收益：多币种总计`);
   lines.push("");
 
   // Platform summary
@@ -139,7 +139,7 @@ function toMarkdown(
   for (const [p, stat] of Object.entries(summary.platforms)) {
     if (stat.count === 0) continue;
     lines.push(
-      `| ${PL[p as keyof typeof PL]} | ${stat.count} | ${stat.avgCommission}% | ${stat.avgScore?.toFixed(1)} | ¥${stat.totalExpectedRevenue?.toFixed(2)} | ${stat.topCategory} |`,
+      `| ${PL[p as keyof typeof PL]} | ${stat.count} | ${stat.avgCommission}% | ${stat.avgScore?.toFixed(1)} | 多币种 | ${stat.topCategory} |`,
     );
   }
   lines.push("");
@@ -153,12 +153,12 @@ function toMarkdown(
     lines.push(`### ${medal} ${p.title}`);
     lines.push("");
     lines.push(`- **平台**：${PL[p.platform]}`);
-    lines.push(`- **价格**：¥${p.price.toFixed(2)}${p.originalPrice ? `（原价 ¥${p.originalPrice.toFixed(2)}）` : ""}`);
-    lines.push(`- **佣金率**：${p.commissionRate}% ｜ **预期收益**：¥${p.expectedRevenue.toFixed(2)}`);
+    lines.push(`- **价格**：${currencySymbol(p.platform)}${p.price.toFixed(2)}${p.originalPrice ? `（原价 ${currencySymbol(p.platform)}${p.originalPrice.toFixed(2)}）` : ""}`);
+    lines.push(`- **佣金率**：${p.commissionRate}% ｜ **预期收益**：${currencySymbol(p.platform)}${p.expectedRevenue.toFixed(2)}`);
     lines.push(`- **AI 评分**：${p.score.toFixed(1)} / 100`);
     if (p.salesVolume) lines.push(`- **销量**：${p.salesVolume.toLocaleString()}`);
     if (p.rating) lines.push(`- **评分**：${p.rating.toFixed(1)}（${p.reviewCount ?? 0} 评价）`);
-    if (p.couponAmount) lines.push(`- **优惠券**：¥${p.couponAmount}`);
+    if (p.couponAmount) lines.push(`- **优惠券**：${currencySymbol(p.platform)}${p.couponAmount}`);
     if (p.isVirtual) lines.push(`- **类型**：🎁 虚拟商品（数字交付）`);
     if (p.aiCopy) lines.push(`- **AI 文案**：${p.aiCopy}`);
     if (p.aiTags?.length) lines.push(`- **标签**：${p.aiTags.join("、")}`);

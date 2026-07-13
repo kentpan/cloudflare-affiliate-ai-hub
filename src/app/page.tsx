@@ -80,6 +80,7 @@ import {
   type WordFreq,
   type SearchHit,
   PLATFORMS,
+  currencySymbol,
 } from "@/lib/affiliate/types";
 import type { DailyComparison, ProductComparison } from "@/lib/affiliate/comparison";
 import type { CustomizationConfig, Direction } from "@/lib/affiliate/customization";
@@ -313,7 +314,7 @@ export default function DashboardPage() {
     setCompareLoading(true);
     try {
       const res = await fetch(
-        `/data/trend-compare.json`,
+        withBase(`/api/trend-compare?from=${compareFrom}&to=${compareTo}`),
       );
       if (!res.ok) {
         toast.error("对比数据获取失败");
@@ -891,7 +892,7 @@ export default function DashboardPage() {
                                 {hit.product.score.toFixed(1)}
                               </div>
                               <div className="text-[9px] text-emerald-600">
-                                ¥{hit.product.expectedRevenue.toFixed(0)}
+                                {currencySymbol(hit.product.platform)}{hit.product.expectedRevenue.toFixed(0)}
                               </div>
                             </div>
                           </button>
@@ -1344,7 +1345,7 @@ function DirectionGroup({
           {products.length} 件
         </Badge>
         <span className="text-[11px] text-muted-foreground">
-          均分 {avgScore} · 预期 ¥{totalRevenue}
+          均分 {avgScore} · 预期 ≈{totalRevenue}
         </span>
         {direction.keywords.length > 0 && (
           <div className="ml-2 hidden flex-wrap gap-1 sm:flex">
@@ -1582,7 +1583,7 @@ function CompareResult({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <DeltaCard label="商品总数" from={data.fromTotal} to={data.toTotal} delta={data.totalDelta} unit="件" />
         <DeltaCard label="平均评分" from={data.fromAvgScore} to={data.toAvgScore} delta={data.avgScoreDelta} digits={1} />
-        <DeltaCard label="预期收益" from={data.fromRevenue} to={data.toRevenue} delta={data.revenueDelta} prefix="¥" />
+        <DeltaCard label="预期收益" from={data.fromRevenue} to={data.toRevenue} delta={data.revenueDelta} prefix="≈" />
         <DeltaCard label="虚拟占比" from={data.fromVirtualRatio} to={data.toVirtualRatio} delta={data.virtualRatioDelta} suffix="%" digits={1} />
       </div>
 

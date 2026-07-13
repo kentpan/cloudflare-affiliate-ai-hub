@@ -101,7 +101,10 @@ export class AmazonAdapter implements IAdapter {
     const catalog = pool.length ? pool : MOCK_CATALOG;
     for (let i = 0; i < count; i++) {
       const seed = pickRandom(catalog);
-      const price = Math.round(seed.basePrice * randInRange([0.8, 1.4]) * 100) / 100;
+      // Amazon prices are in USD. The shared MOCK_CATALOG uses CNY-like
+      // base prices (e.g. 299, 459), so we apply a rough CNY→USD conversion
+      // (~÷7.2) to land in a realistic USD range.
+      const price = Math.round((seed.basePrice / 7.2) * randInRange([0.8, 1.4]) * 100) / 100;
       const commission = randInRange(seed.commissionRange);
       out.push({
         id: `amz-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,

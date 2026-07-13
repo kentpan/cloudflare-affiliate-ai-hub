@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   PLATFORM_COLORS,
   PLATFORM_LABELS,
+  currencySymbol,
   type PickedProduct,
 } from "@/lib/affiliate/types";
 import { cn } from "@/lib/utils";
@@ -146,7 +147,7 @@ export function ProductCard({ product, rank, onSelect }: ProductCardProps) {
           <Metric
             icon={<Ticket className="h-3 w-3" />}
             label="券"
-            value={product.couponAmount ? `¥${product.couponAmount}` : "-"}
+            value={product.couponAmount ? `${currencySymbol(product.platform)}${product.couponAmount}` : "-"}
             tone="rose"
           />
         </div>
@@ -156,16 +157,16 @@ export function ProductCard({ product, rank, onSelect }: ProductCardProps) {
           <div>
             <div className="flex items-baseline gap-1">
               <span className="text-lg font-bold text-rose-600">
-                ¥{product.price.toFixed(0)}
+                {currencySymbol(product.platform)}{product.price.toFixed(0)}
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
                 <span className="text-xs text-muted-foreground line-through">
-                  ¥{product.originalPrice.toFixed(0)}
+                  {currencySymbol(product.platform)}{product.originalPrice.toFixed(0)}
                 </span>
               )}
             </div>
             <div className="text-[10px] text-emerald-600">
-              预期收益 ¥{product.expectedRevenue.toFixed(2)}
+              预期收益 {currencySymbol(product.platform)}{product.expectedRevenue.toFixed(2)}
             </div>
           </div>
           <Button
