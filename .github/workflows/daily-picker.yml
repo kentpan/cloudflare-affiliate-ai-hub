@@ -80,7 +80,7 @@ jobs:
 
       - name: Install app deps (shared lib)
         working-directory: .
-        run: npm ci || npm install
+        run: npm install --no-audit --no-fund
 
       - name: Install scripts deps
         working-directory: ./scripts
@@ -260,10 +260,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
+      # Use `npm install` (NOT `npm ci`) because:
+      # 1. The project uses bun.lock (not package-lock.json) — npm ci would fail
+      # 2. `npm install` resolves platform-specific optional deps (like
+      #    lightningcss-linux-x64-gnu) for the CI runner's platform.
+      #    `npm ci` strictly follows the lockfile and may skip these, causing
+      #    "Cannot find module '../lightningcss.linux-x64-gnu.node'" at build time.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build

@@ -1,6 +1,6 @@
 {
   "name": "affiliate-ai-hub-web",
-  "version": "6.7.0",
+  "version": "6.8.0",
   "private": true,
   "description": "联盟 AI 选品中心 — Next.js 16 dashboard for the Affiliate AI Hub monorepo.",
   "scripts": {
@@ -91,6 +91,8 @@
     "bun-types": "^1.3.4",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
+    "lightningcss": "^1.29.2",
+    "lightningcss-linux-x64-gnu": "^1.29.2",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
