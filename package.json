@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-affiliate-ai-hub",
-  "version": "7.0.3",
+  "version": "7.0.4",
   "private": true,
   "description": "联盟 AI 选品中心 — Next.js 16 dashboard for the Cloudflare Affiliate AI Hub.",
   "scripts": {

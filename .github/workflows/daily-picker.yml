@@ -78,9 +78,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install app deps (shared lib)
+      - name: Install app deps (clean install — fix npm optional deps bug)
         working-directory: .
-        run: npm install --no-audit --no-fund
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
 
       - name: Install scripts deps
         working-directory: ./scripts
@@ -261,14 +263,18 @@ jobs:
         with:
           node-version: '22'
 
-      # Use `npm install` (NOT `npm ci`) because:
-      # 1. The project uses bun.lock (not package-lock.json) — npm ci would fail
-      # 2. `npm install` resolves platform-specific optional deps (like
-      #    lightningcss-linux-x64-gnu) for the CI runner's platform.
-      #    `npm ci` strictly follows the lockfile and may skip these, causing
-      #    "Cannot find module '../lightningcss.linux-x64-gnu.node'" at build time.
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      # Install dependencies. npm has a known bug with optional dependencies
+      # (https://github.com/npm/cli/issues/4828) where platform-specific native
+      # bindings (lightningcss-linux-x64-gnu, @tailwindcss/oxide-linux-x64-gnu)
+      # are not installed correctly if package-lock.json or node_modules already
+      # exist from a previous run/cache.
+      #
+      # Fix: explicitly delete both before `npm install`. This forces a clean
+      # resolution that installs the correct native bindings for the CI platform.
+      - name: Clean install (fix npm optional deps bug)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
