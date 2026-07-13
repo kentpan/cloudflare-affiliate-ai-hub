@@ -25,6 +25,7 @@ import {
   FileText,
   Eye,
   EyeOff,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { withBase } from "@/lib/base";
@@ -70,6 +71,8 @@ export function CredentialsPanel({ open, onOpenChange }: CredentialsPanelProps) 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+  // For local-dev edge runtime: .env content returned for download
+  const [envContent, setEnvContent] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,8 +119,15 @@ export function CredentialsPanel({ open, onOpenChange }: CredentialsPanelProps) 
       if (res.ok && data.ok) {
         toast.success(data.message ?? `已写入 ${data.updatedCount} 项凭证`, { id: t });
         setDraft({});
-        // Reload to show updated masked values
-        await load();
+        // If the API returned .env content (local-dev edge runtime can't
+        // write to filesystem), show a download button.
+        if (data.envContent) {
+          setEnvContent(data.envContent);
+        } else {
+          setEnvContent(null);
+          // Reload to show updated masked values
+          await load();
+        }
       } else {
         const errMsg = data.error ?? "保存失败";
         if (data.errors?.length) {
@@ -242,6 +252,60 @@ export function CredentialsPanel({ open, onOpenChange }: CredentialsPanelProps) 
                 <Separator className="mt-3" />
               </div>
             ))}
+          </div>
+        )}
+
+        {/* .env download (local-dev edge runtime can't write to filesystem) */}
+        {envContent && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+            <div className="mb-2 flex items-center gap-2">
+              <Download className="h-4 w-4 text-amber-600" />
+              <span className="text-xs font-semibold text-amber-800 dark:text-amber-400">
+                下载 .env 文件
+              </span>
+            </div>
+            <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-500">
+              当前运行在 Edge Runtime，无法直接写入文件系统。请下载 .env 文件并放置到项目根目录。
+            </p>
+            <pre className="mb-2 max-h-32 overflow-auto rounded bg-amber-100/50 p-2 text-[10px] dark:bg-amber-950/50">
+              <code>{envContent}</code>
+            </pre>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="gap-1"
+                onClick={() => {
+                  const blob = new Blob([envContent], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = ".env";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(".env 文件已下载，请放置到项目根目录");
+                }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                下载 .env
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(envContent);
+                  toast.success("已复制到剪贴板");
+                }}
+              >
+                复制内容
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEnvContent(null)}
+              >
+                关闭
+              </Button>
+            </div>
           </div>
         )}
 

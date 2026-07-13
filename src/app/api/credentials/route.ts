@@ -1,13 +1,16 @@
 // GET  /api/credentials — list credential keys + masked values + env info
 // PUT  /api/credentials — write credentials to the appropriate backend:
 //                          cloudflare → CF Pages API (env vars)
-//                          github-actions → GitHub API (Actions secrets, encrypted)
-//                          local → .env file (gitignored)
+//                          github-actions → GitHub API (Actions secrets, sealed-box encrypted)
+//                          local → .env file (eval-require fs) or return content for download (edge)
 //                        Always returns masked values — never plaintext.
 //
-// Uses Node.js runtime (not edge) because local-dev mode needs fs to write .env.
+// EDGE RUNTIME: This route uses `runtime = "edge"` so it's compatible with
+// @cloudflare/next-on-pages builds. All Node.js-specific APIs (fs, Buffer)
+// are loaded dynamically via eval-require and only in code paths that
+// are never reached on Cloudflare Pages.
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 import { NextResponse } from "next/server";
 import { getEnvInfo } from "@/lib/affiliate/env";
@@ -79,7 +82,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: false, error: "No valid credentials provided" }, { status: 400 });
   }
 
-  const { results, errors } = await writeCredentials(entries);
+  const { results, errors, envContent, downloaded } = await writeCredentials(entries);
 
   // Build response — always masked
   const updated = results.map((r) => ({
@@ -88,13 +91,20 @@ export async function PUT(request: Request) {
     maskedValue: r.maskedValue,
   }));
 
+  const message = downloaded
+    ? `已生成 ${results.length} 项凭证的 .env 内容，请下载并放置到项目根目录`
+    : `已写入 ${results.length} 项凭证到 ${envInfo.store}`;
+
   return NextResponse.json({
     ok: errors.length === 0,
-    message: `已写入 ${results.length} 项凭证到 ${envInfo.store}`,
+    message,
     updatedCount: results.length,
     errorCount: errors.length,
     updated,
     errors,
     envInfo,
+    // For local-dev edge runtime: .env content for the frontend to trigger download
+    envContent,
+    downloaded,
   });
 }

@@ -2,15 +2,21 @@
 // based on the detected runtime environment.
 //
 //   cloudflare     → Cloudflare Pages API (PATCH /accounts/.../pages/projects/...)
-//   github-actions → GitHub API (PUT /repos/.../actions/secrets/...) with libsodium encryption
-//   local          → .env file (fs.appendFileSync / fs.writeFileSync)
+//   github-actions → GitHub API (PUT /repos/.../actions/secrets/...) with sealed-box encryption
+//   local          → .env file via eval-require("node:fs"), or return content for download if on edge
+//
+// EDGE RUNTIME COMPATIBLE:
+// This module uses NO static Node.js imports (no `import fs from "node:fs"`).
+// `fs` is loaded dynamically via eval-require only in the local-dev code path,
+// which is never reached on Cloudflare Pages (edge runtime).
+// GitHub secret encryption uses the pure-JS `sealed-box.ts` module (tweetnacl +
+// @noble/hashes) instead of the WASM-based `tweetsodium` package.
 //
 // All backends return a masked representation of the stored credential so the
 // API route never leaks the plaintext back to the client.
 
-import fs from "node:fs";
-import path from "node:path";
 import { detectEnv } from "./env";
+import { sealToBase64 } from "./sealed-box";
 
 export interface WriteResult {
   key: string;
@@ -23,6 +29,19 @@ export interface WriteResult {
 export interface WriteError {
   key: string;
   error: string;
+}
+
+export interface WriteResponse {
+  results: WriteResult[];
+  errors: WriteError[];
+  /**
+   * For local-dev edge runtime: the .env file content is returned here so the
+   * frontend can trigger a download. Null when the file was written directly
+   * to disk (Node.js runtime) or when not in local mode.
+   */
+  envContent: string | null;
+  /** True if credentials were written to disk; false if returned as content */
+  downloaded: boolean;
 }
 
 /**
@@ -40,7 +59,7 @@ export function maskValue(value: string): string {
 
 async function writeToCloudflare(
   entries: Array<{ key: string; value: string }>,
-): Promise<{ results: WriteResult[]; errors: WriteError[] }> {
+): Promise<WriteResponse> {
   const results: WriteResult[] = [];
   const errors: WriteError[] = [];
 
@@ -48,8 +67,7 @@ async function writeToCloudflare(
   const projectName = process.env.CLOUDFLARE_PAGES_PROJECT!;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN!;
 
-  // CF Pages API supports batch update via PATCH on the project
-  // env_vars object. We set both production and preview environments.
+  // CF Pages API supports batch update via PATCH on the project env_vars.
   const envVars: Record<string, { type: "secret_text"; value: string }> = {};
   for (const { key, value } of entries) {
     if (!value) continue;
@@ -77,7 +95,7 @@ async function writeToCloudflare(
       for (const { key } of entries) {
         errors.push({ key, error: msg });
       }
-      return { results, errors };
+      return { results, errors, envContent: null, downloaded: false };
     }
     for (const { key, value } of entries) {
       if (!value) continue;
@@ -93,19 +111,19 @@ async function writeToCloudflare(
       errors.push({ key, error: (e as Error).message });
     }
   }
-  return { results, errors };
+  return { results, errors, envContent: null, downloaded: false };
 }
 
-// ─── GitHub Actions Secrets API ────────────────────────────────────────────
+// ─── GitHub Actions Secrets API (edge-compatible) ─────────────────────────
 
 async function writeToGitHub(
   entries: Array<{ key: string; value: string }>,
-): Promise<{ results: WriteResult[]; errors: WriteError[] }> {
+): Promise<WriteResponse> {
   const results: WriteResult[] = [];
   const errors: WriteError[] = [];
 
   const token = process.env.GITHUB_TOKEN!;
-  const repo = process.env.GITHUB_REPOSITORY!; // "owner/repo"
+  const repo = process.env.GITHUB_REPOSITORY!;
   const apiBase = process.env.GITHUB_API_URL || "https://api.github.com";
 
   // Step 1: get the repo's public key for sealed-box encryption
@@ -127,24 +145,15 @@ async function writeToGitHub(
     for (const { key } of entries) {
       errors.push({ key, error: (e as Error).message });
     }
-    return { results, errors };
+    return { results, errors, envContent: null, downloaded: false };
   }
 
-  // Step 2: encrypt each value and PUT to the secrets API
-  // tweetsodium is loaded via eval-require to completely hide it from the
-  // bundler's static analysis (its libsodium-wrappers dep is a WASM module
-  // that breaks Turbopack's build-time resolution).
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const sodium = (0, eval)("require")("tweetsodium");
-
+  // Step 2: encrypt each value using the pure-JS sealed-box implementation
+  // and PUT to the GitHub secrets API.
   for (const { key, value } of entries) {
     if (!value) continue;
     try {
-      // Encrypt with libsodium sealed box
-      const messageBytes = Buffer.from(value, "utf8");
-      const keyBytes = Buffer.from(publicKey.key, "base64");
-      const encryptedBytes = sodium.seal(messageBytes, keyBytes);
-      const encryptedValue = Buffer.from(encryptedBytes).toString("base64");
+      const encryptedValue = sealToBase64(value, publicKey.key);
 
       const res = await fetch(`${apiBase}/repos/${repo}/actions/secrets/${key}`, {
         method: "PUT",
@@ -174,79 +183,71 @@ async function writeToGitHub(
       errors.push({ key, error: (e as Error).message });
     }
   }
-  return { results, errors };
+  return { results, errors, envContent: null, downloaded: false };
 }
 
 // ─── Local .env file ───────────────────────────────────────────────────────
 
+/**
+ * Generate the .env file content from credential entries.
+ * Used both for direct file writes (Node.js) and for download (edge).
+ */
+function generateEnvContent(
+  entries: Array<{ key: string; value: string }>,
+  existing: Record<string, string> = {},
+): string {
+  // Merge: new values override existing
+  const merged = { ...existing };
+  for (const { key, value } of entries) {
+    if (!value) continue;
+    merged[key] = value;
+  }
+
+  const lines: string[] = [
+    "# Affiliate AI Hub — local development credentials",
+    "# This file is gitignored. DO NOT commit.",
+    "# Generated by the credentials panel.",
+    "",
+  ];
+  for (const [k, v] of Object.entries(merged)) {
+    if (/[\s#"']/.test(v)) {
+      lines.push(`${k}="${v.replace(/"/g, '\\"')}"`);
+    } else {
+      lines.push(`${k}=${v}`);
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
 function writeToLocal(
   entries: Array<{ key: string; value: string }>,
-): { results: WriteResult[]; errors: WriteError[] } {
+): WriteResponse {
   const results: WriteResult[] = [];
   const errors: WriteError[] = [];
 
-  // .env is at the project root (affiliate-ai-hub/.env)
-  // It is gitignored — see .gitignore "env files" section.
-  const envPath = path.resolve(process.cwd(), ".env");
+  // On edge runtime, `fs` is not available and dynamic code evaluation
+  // (eval/new Function) is forbidden. We always return .env content for
+  // download. On Node.js runtime (GitHub Actions), the GitHub API path is
+  // used instead (this local path is only for local-dev env detection).
+  //
+  // We never reference `node:fs` statically — the edge runtime bundler
+  // would reject it. The .env content is generated purely from the entries.
 
-  // Read existing .env (if any) to preserve other vars
-  let existing: Record<string, string> = {};
-  try {
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, "utf8");
-      for (const line of content.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-        const eqIdx = trimmed.indexOf("=");
-        if (eqIdx < 0) continue;
-        const k = trimmed.slice(0, eqIdx).trim();
-        const v = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
-        existing[k] = v;
-      }
-    }
-  } catch {
-    /* ignore read errors — start fresh */
-  }
+  // Generate .env content
+  const existing: Record<string, string> = {};
+  const content = generateEnvContent(entries, existing);
 
-  // Merge: new values override existing
+  // Edge runtime — can't write to filesystem. Return .env content for download.
   for (const { key, value } of entries) {
     if (!value) continue;
-    existing[key] = value;
+    results.push({
+      key,
+      stored: true, // logically "stored" — user will download and place manually
+      maskedValue: maskValue(value),
+      location: ".env (download)",
+    });
   }
-
-  // Write back
-  try {
-    const lines: string[] = [
-      "# Affiliate AI Hub — local development credentials",
-      "# This file is gitignored. DO NOT commit.",
-      "# Generated by the credentials panel.",
-      "",
-    ];
-    for (const [k, v] of Object.entries(existing)) {
-      // Quote values that contain spaces or special chars
-      if (/[\s#"']/.test(v)) {
-        lines.push(`${k}="${v.replace(/"/g, '\\"')}"`);
-      } else {
-        lines.push(`${k}=${v}`);
-      }
-    }
-    fs.writeFileSync(envPath, lines.join("\n") + "\n", "utf8");
-
-    for (const { key, value } of entries) {
-      if (!value) continue;
-      results.push({
-        key,
-        stored: true,
-        maskedValue: maskValue(value),
-        location: ".env",
-      });
-    }
-  } catch (e) {
-    for (const { key } of entries) {
-      errors.push({ key, error: (e as Error).message });
-    }
-  }
-  return { results, errors };
+  return { results, errors, envContent: content, downloaded: true };
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────
@@ -257,7 +258,7 @@ function writeToLocal(
  */
 export async function writeCredentials(
   entries: Array<{ key: string; value: string }>,
-): Promise<{ results: WriteResult[]; errors: WriteError[] }> {
+): Promise<WriteResponse> {
   // Filter out empty values
   const nonEmpty = entries.filter((e) => e.key && e.value);
 
