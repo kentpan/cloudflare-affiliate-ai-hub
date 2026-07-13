@@ -1,0 +1,30 @@
+# Cloudflare Pages / Workers configuration.
+#
+# This file is the SINGLE SOURCE OF TRUTH for the nodejs_compat compatibility
+# flag that @cloudflare/next-on-pages output requires. Both `wrangler pages deploy`
+# and `wrangler deploy` read it automatically — no need for --compatibility-flag
+# on the CLI.
+#
+# When `npx @cloudflare/next-on-pages@1` builds the project, it generates
+# `.vercel/output/static/_worker.js` which is a Cloudflare Workers script
+# that uses Node.js built-ins (Buffer, process, node:buffer, node:async_hooks,
+# node:stream). The Workers runtime rejects these unless `nodejs_compat` is set.
+#
+# Previous failed attempts:
+#   v6.6.0 — project-level API PATCH only (didn't apply at deploy time)
+#   v6.7.0 — project-level PATCH + wrangler CLI --compatibility-flag (still failed)
+# This wrangler.toml approach is the OFFICIAL documented way to set flags
+# for Workers/Pages and is read directly by wrangler at deploy time.
+
+name = "affiliate-ai-hub"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages deployment configuration.
+# `pages_build_output_dir` tells wrangler where the built assets are.
+# @cloudflare/next-on-pages outputs to `.vercel/output/static`.
+pages_build_output_dir = ".vercel/output/static"
+
+# Observability (optional but useful for debugging runtime issues).
+[observability]
+enabled = true

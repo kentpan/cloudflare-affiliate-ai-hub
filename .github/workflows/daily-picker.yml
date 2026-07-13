@@ -281,59 +281,47 @@ jobs:
         run: npx @cloudflare/next-on-pages@1
 
       # ─── Deploy to Cloudflare Pages ──────────────────────────────────────
-      # @cloudflare/next-on-pages output uses Node.js built-ins (node:buffer,
-      # node:async_hooks, node:stream, etc.) that require the `nodejs_compat`
-      # compatibility flag in the Workers runtime.
+      # nodejs_compat flag is configured in `wrangler.toml` at the project
+      # root — the OFFICIAL documented way. wrangler reads it automatically
+      # at deploy time. No CLI flags needed.
       #
-      # We set it in TWO places for maximum reliability:
-      #   1. Project-level (via CF API PATCH) — sets the default for ALL
-      #      future deployments (including dashboard-triggered ones).
-      #   2. Deployment-level (via `--compatibility-flag` CLI arg on
-      #      `wrangler pages deploy`) — guarantees THIS specific deployment
-      #      has the flag, even if the project-level PATCH failed.
+      # `wrangler.toml` contains:
+      #   compatibility_date = "2024-09-23"
+      #   compatibility_flags = ["nodejs_compat"]
+      #   pages_build_output_dir = ".vercel/output/static"
       #
-      # Previous issue (v6.6.0): only project-level PATCH was used, and it
-      # either failed silently or wrangler didn't inherit it → runtime error
-      # "no nodejs_compat compatibility flag set".
+      # Previous failed attempts (v6.6.0, v6.7.0):
+      #   - CF API PATCH only → didn't apply at deploy time
+      #   - wrangler CLI --compatibility-flag → still failed
+      # The wrangler.toml approach is read directly by wrangler and is the
+      # most reliable way to set compatibility flags.
       # ──────────────────────────────────────────────────────────────────────
-
-      # Step 1: Set nodejs_compat as the project-level default (idempotent).
-      - name: Set nodejs_compat flag on CF Pages project (project-level default)
+      - name: Verify wrangler.toml has nodejs_compat
         if: ${{ steps.cf_check.outputs.configured == 'true' }}
-        env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
-          set -e
-          echo "Setting nodejs_compat flag on project: ${CF_PROJECT}"
-          BODY=$(curl -sf -X PATCH \
-            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${CF_PROJECT}" \
-            -H "Authorization: Bearer ${CF_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "deployment_configs": {
-                "production": { "compatibility_flags": ["nodejs_compat"] },
-                "preview": { "compatibility_flags": ["nodejs_compat"] }
-              }
-            }')
-          echo "$BODY" | jq '{ success: .success, prod_flags: .result.deployment_configs.production.compatibility_flags, preview_flags: .result.deployment_configs.preview.compatibility_flags }'
+          if [ ! -f wrangler.toml ]; then
+            echo "❌ ERROR: wrangler.toml not found!"
+            exit 1
+          fi
+          if ! grep -q "nodejs_compat" wrangler.toml; then
+            echo "❌ ERROR: nodejs_compat not found in wrangler.toml!"
+            exit 1
+          fi
+          echo "✓ wrangler.toml verified:"
+          grep -E "compatibility_date|compatibility_flags|pages_build_output_dir" wrangler.toml
 
-      # Step 2: Deploy with --compatibility-flag=nodejs_compat directly on the
-      # wrangler CLI. This is the CRITICAL step — it applies the flag to the
-      # actual deployment being created right now, bypassing any project-level
-      # inheritance issues.
-      - name: Deploy to Cloudflare Pages (with nodejs_compat flag)
+      - name: Deploy to Cloudflare Pages (via wrangler.toml)
         if: ${{ steps.cf_check.outputs.configured == 'true' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # wrangler.toml at project root is read automatically.
+          # --project-name overrides the `name` in wrangler.toml if the
+          # CF Pages project has a different name.
           npx wrangler@latest pages deploy .vercel/output/static \
             --project-name="${{ vars.CLOUDFLARE_PAGES_PROJECT }}" \
-            --branch=main \
-            --compatibility-date=2024-09-23 \
-            --compatibility-flag=nodejs_compat
+            --branch=main
 
       - name: Deploy Summary
         if: ${{ always() }}
@@ -343,7 +331,7 @@ jobs:
           echo "- **Trigger**: push to ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit**: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **CF Pages deploy**: ${{ steps.cf_check.outputs.configured == 'true' && '✓ deployed' || '⤵ skipped (secrets not configured, build-only)' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **nodejs_compat flag**: set via CF API (project default) + wrangler CLI (deployment-level)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **nodejs_compat flag**: set via wrangler.toml (read by wrangler at deploy time)" >> "$GITHUB_STEP_SUMMARY"
 
   notify-failure:
     runs-on: ubuntu-latest

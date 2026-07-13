@@ -48,3 +48,6 @@ web/prisma/*.db-journal
 
 # logs
 *.log
+
+# @cloudflare/next-on-pages output
+.vercel/
