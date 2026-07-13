@@ -275,55 +275,60 @@ jobs:
         if: ${{ steps.cf_check.outputs.configured == 'true' }}
         run: npx @cloudflare/next-on-pages@1
 
-      # Set the nodejs_compat compatibility flag on the CF Pages project.
-      # @cloudflare/next-on-pages output uses Node.js APIs (Buffer, process,
-      # stream, etc.) that require this flag in the Workers runtime.
-      # Without it, the deployed site throws: "Node.JS Compatibility Error:
-      # no nodejs_compat compatibility flag set".
-      # This API call is idempotent — safe to run on every deploy.
-      - name: Set nodejs_compat flag on CF Pages project
+      # ─── Deploy to Cloudflare Pages ──────────────────────────────────────
+      # @cloudflare/next-on-pages output uses Node.js built-ins (node:buffer,
+      # node:async_hooks, node:stream, etc.) that require the `nodejs_compat`
+      # compatibility flag in the Workers runtime.
+      #
+      # We set it in TWO places for maximum reliability:
+      #   1. Project-level (via CF API PATCH) — sets the default for ALL
+      #      future deployments (including dashboard-triggered ones).
+      #   2. Deployment-level (via `--compatibility-flag` CLI arg on
+      #      `wrangler pages deploy`) — guarantees THIS specific deployment
+      #      has the flag, even if the project-level PATCH failed.
+      #
+      # Previous issue (v6.6.0): only project-level PATCH was used, and it
+      # either failed silently or wrangler didn't inherit it → runtime error
+      # "no nodejs_compat compatibility flag set".
+      # ──────────────────────────────────────────────────────────────────────
+
+      # Step 1: Set nodejs_compat as the project-level default (idempotent).
+      - name: Set nodejs_compat flag on CF Pages project (project-level default)
         if: ${{ steps.cf_check.outputs.configured == 'true' }}
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
-          echo "Setting nodejs_compat compatibility flag on project: ${CF_PROJECT}"
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X PATCH \
+          set -e
+          echo "Setting nodejs_compat flag on project: ${CF_PROJECT}"
+          BODY=$(curl -sf -X PATCH \
             "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/pages/projects/${CF_PROJECT}" \
             -H "Authorization: Bearer ${CF_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{
               "deployment_configs": {
-                "production": {
-                  "compatibility_flags": ["nodejs_compat"]
-                },
-                "preview": {
-                  "compatibility_flags": ["nodejs_compat"]
-                }
+                "production": { "compatibility_flags": ["nodejs_compat"] },
+                "preview": { "compatibility_flags": ["nodejs_compat"] }
               }
             }')
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          echo "HTTP status: ${HTTP_CODE}"
-          if echo "$BODY" | jq -e '.success == true' > /dev/null 2>&1; then
-            echo "✓ nodejs_compat flag set successfully"
-            echo "$BODY" | jq -r '.result.deployment_configs.production.compatibility_flags // [] | join(", ")' | xargs -I{} echo "  Production flags: {}"
-            echo "$BODY" | jq -r '.result.deployment_configs.preview.compatibility_flags // [] | join(", ")' | xargs -I{} echo "  Preview flags: {}"
-          else
-            echo "⚠ Failed to set compatibility flag:"
-            echo "$BODY" | jq '.errors // .' 2>/dev/null || echo "$BODY"
-            echo "Continuing — you may need to set it manually in CF dashboard"
-          fi
+          echo "$BODY" | jq '{ success: .success, prod_flags: .result.deployment_configs.production.compatibility_flags, preview_flags: .result.deployment_configs.preview.compatibility_flags }'
 
-      - name: Deploy to Cloudflare Pages
+      # Step 2: Deploy with --compatibility-flag=nodejs_compat directly on the
+      # wrangler CLI. This is the CRITICAL step — it applies the flag to the
+      # actual deployment being created right now, bypassing any project-level
+      # inheritance issues.
+      - name: Deploy to Cloudflare Pages (with nodejs_compat flag)
         if: ${{ steps.cf_check.outputs.configured == 'true' }}
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .vercel/output/static --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler@latest pages deploy .vercel/output/static \
+            --project-name="${{ vars.CLOUDFLARE_PAGES_PROJECT }}" \
+            --branch=main \
+            --compatibility-date=2024-09-23 \
+            --compatibility-flag=nodejs_compat
 
       - name: Deploy Summary
         if: ${{ always() }}
@@ -333,7 +338,7 @@ jobs:
           echo "- **Trigger**: push to ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit**: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **CF Pages deploy**: ${{ steps.cf_check.outputs.configured == 'true' && '✓ deployed' || '⤵ skipped (secrets not configured, build-only)' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **nodejs_compat flag**: set via CF API (production + preview)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **nodejs_compat flag**: set via CF API (project default) + wrangler CLI (deployment-level)" >> "$GITHUB_STEP_SUMMARY"
 
   notify-failure:
     runs-on: ubuntu-latest

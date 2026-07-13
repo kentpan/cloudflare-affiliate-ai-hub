@@ -1,6 +1,6 @@
 {
   "name": "affiliate-ai-hub-web",
-  "version": "6.5.0",
+  "version": "6.7.0",
   "private": true,
   "description": "联盟 AI 选品中心 — Next.js 16 dashboard for the Affiliate AI Hub monorepo.",
   "scripts": {
