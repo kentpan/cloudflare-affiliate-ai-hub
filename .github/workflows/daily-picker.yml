@@ -225,8 +225,12 @@ jobs:
           echo "View full data in the uploaded artifact or the committed \`.data/\` directory." >> "$GITHUB_STEP_SUMMARY"
 
   # Deploy job — runs AFTER pick completes, builds the web app with the latest
-  # .data/ and deploys to Cloudflare Pages (or uploads artifact if no CF token).
+  # .data/ and deploys to Cloudflare Pages directly (via API token).
   # This ensures the serial flow: pick → commit .data → build web → deploy.
+  #
+  # IMPORTANT: Cloudflare Pages does NOT need LLMAI_APIKEY or any联盟 API
+  # secrets. The picker (pick job) already generated .data/ — the deploy job
+  # only builds the static frontend with that data and pushes to CF Pages.
   deploy:
     runs-on: ubuntu-latest
     needs: pick
@@ -261,18 +265,16 @@ jobs:
           path: web/.next
           retention-days: 7
 
-      # Deploy to Cloudflare Pages if CLOUDFLARE_API_TOKEN is configured.
-      # Otherwise, the build artifact is uploaded above for manual deployment.
+      # Deploy to Cloudflare Pages directly via API token.
+      # This is the RECOMMENDED method — no Cloudflare Git integration needed.
+      # The deploy uses wrangler to push the standalone build.
       - name: Deploy to Cloudflare Pages
-        if: ${{ vars.ENABLE_CLOUDFLARE_PAGES == 'true' }}
-        uses: cloudflare/pages-action@v1
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: affiliate-ai-hub
-          directory: web/.next/standalone
-          # The standalone build includes .next + public + server.js
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy web/.next/standalone --project-name=affiliate-ai-hub
 
       - name: Deploy Summary
         run: |
@@ -280,11 +282,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Build**: ✅ Web built with latest \`.data/${{ needs.pick.outputs.date }}/\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Artifact**: web-build-${{ needs.pick.outputs.date }} (7-day retention)" >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "${{ vars.ENABLE_CLOUDFLARE_PAGES }}" ] && [ "${{ vars.ENABLE_CLOUDFLARE_PAGES }}" = "true" ]; then
-            echo "- **Cloudflare Pages**: ✅ Deployed" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- **Cloudflare Pages**: ⏭️ Skipped (set ENABLE_CLOUDFLARE_PAGES=true + CLOUDFLARE_API_TOKEN secret to enable)" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "- **Cloudflare Pages**: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && '✅ Deployed via wrangler' || '⏭️ Skipped (add CLOUDFLARE_API_TOKEN secret to enable)' }}" >> "$GITHUB_STEP_SUMMARY"
 
   # Failure notification job — runs if pick fails
   notify-failure:

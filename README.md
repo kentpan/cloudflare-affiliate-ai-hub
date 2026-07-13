@@ -107,6 +107,56 @@ affiliate-ai-hub/
 
 > 🔧 **Node 版本**：两个 workflow 使用 Node v22 LTS（满足 ≥ v20 要求，避免 GitHub Actions Node 20 弃用警告）。
 
+### ☁️ Cloudflare Pages 部署（可选）
+
+**重要：Cloudflare Pages 只负责构建前端 + 部署，不需要任何 LLMAI_APIKEY 或联盟 API 密钥！**
+
+选品数据由 GitHub Actions 的 `daily-picker.yml` 在 GitHub 服务器上生成，提交到 `.data/` 目录。Cloudflare Pages 只需用最新 `.data/` 构建前端并部署。
+
+#### 方式一：GitHub Actions 自动部署（推荐）
+
+`daily-picker.yml` 已内置 `deploy` job，会在选品完成后自动构建并部署到 Cloudflare Pages。
+
+**配置步骤**：
+1. 在 Cloudflare Dashboard 创建 Pages 项目（项目名 `affiliate-ai-hub`）
+2. 获取 API Token：Cloudflare Dashboard → My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" 模板（或自定义，勾选 Pages:Edit）
+3. 获取 Account ID：Cloudflare Dashboard 右侧栏 → Account ID
+4. 在 GitHub 仓库添加 Secrets：
+   - `Settings → Secrets and variables → Actions → New repository secret`
+   - `CLOUDFLARE_API_TOKEN` = 你的 API Token
+   - `CLOUDFLARE_ACCOUNT_ID` = 你的 Account ID
+5. 完成！每次 daily-picker 运行后会自动部署到 Cloudflare Pages
+
+> ⚠️ **不要**在 Cloudflare Pages 的 Git 集成中配置构建命令/输出目录 —— 部署完全由 GitHub Actions 的 `deploy` job 处理。如果你已经配置了 Cloudflare Git 集成，建议在 Cloudflare Dashboard 中断开 Git 连接，避免重复构建。
+
+#### 方式二：Cloudflare Pages Git 集成（不推荐，复杂）
+
+如果你想用 Cloudflare 自己的 Git 集成构建，配置如下：
+
+| 字段 | 值 |
+|------|-----|
+| Framework preset | `Next.js` |
+| Build command | `cd web && npm ci && npm run build` |
+| Build output directory | `web/.next/standalone` |
+| Root directory | （留空） |
+| Environment variables | **不需要任何变量**（LLMAI_APIKEY 等只在 GitHub Actions 用） |
+
+> ⚠️ 方式二的问题：GitHub Actions 提交的 `.data/` push 不会触发 Cloudflare Git 集成（CF 视 GitHub Actions bot 的 push 为非用户操作）。因此推荐用方式一。
+
+### 🏗️ 架构说明：数据流向
+
+```
+GitHub Actions (daily-picker.yml)
+  ├─ pick job: 抓取商品 + AI 评分 → 生成 .data/{date}/
+  │   └─ 需要 LLMAI_APIKEY（可选）+ 联盟 API 凭证（可选）
+  │   └─ 无凭证时自动用 mock + 启发式模式
+  ├─ git commit + push .data/ 到 main
+  └─ deploy job: 用最新 .data/ 构建 web → 部署 Cloudflare Pages
+      └─ 不需要任何 API 密钥（只是 npm build + wrangler deploy）
+```
+
+**关键点**：LLMAI_APIKEY 等密钥只在 GitHub Actions 的 `pick` job 中使用（生成选品数据）。Cloudflare Pages 部署阶段不需要任何密钥——它只是把已经生成好的 `.data/` 打包进前端并发布。
+
 ### 本地开发
 
 ```bash
