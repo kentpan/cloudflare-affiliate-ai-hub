@@ -3,6 +3,8 @@
 // It must never be imported by API routes (which use edge runtime).
 // Only imported by: generator.ts, customization.ts, comparison.ts, seed.ts
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 export function listDatesSync(): string[] {
   const fs = require("node:fs");
   const path = require("node:path");

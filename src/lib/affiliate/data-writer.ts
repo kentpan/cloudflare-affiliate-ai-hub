@@ -3,17 +3,29 @@
 // Architecture (elegant, no shims):
 // - Node.js (local dev, GitHub Actions): uses node-data-writer.ts (fs)
 // - Cloudflare Pages (edge): fetches .data/*.json from GitHub raw URL
-// - The GitHub repo + branch is configured via NEXT_PUBLIC_GIT_REPO env var
-//   (format: "owner/repo" or full URL "https://raw.githubusercontent.com/owner/repo/main")
+// - The GitHub repo + branch is configured via NEXT_PUBLIC_DATA_URL env var
+//   (full URL "https://raw.githubusercontent.com/owner/repo/main") OR
+//   NEXT_PUBLIC_GIT_REPO env var (format: "owner/repo").
+//
+// If neither env var is set (e.g. CF Pages git integration built without
+// env vars configured), falls back to the DEFAULT_GITHUB_RAW_URL constant
+// below — pointing to the canonical repo. This ensures the dashboard
+// always has data even when CF Pages builds without env vars.
 //
 // API routes use this module (edge-compatible fetch).
 // Generator/scripts use node-data-writer.ts (fs, Node.js only).
 
-// GitHub raw URL base — can be overridden by env var
+// Canonical GitHub repo — used as fallback when NEXT_PUBLIC_* env vars
+// are not set at build time (e.g. CF Pages git integration without
+// configured environment variables).
+const DEFAULT_GIT_REPO = "kentpan/cloudflare-affiliate-ai-hub";
+const DEFAULT_GITHUB_RAW_URL = `https://raw.githubusercontent.com/${DEFAULT_GIT_REPO}/main`;
+
+// GitHub raw URL base — env var overrides the default
 const GITHUB_RAW_BASE = process.env.NEXT_PUBLIC_DATA_URL ||
   (process.env.NEXT_PUBLIC_GIT_REPO
     ? `https://raw.githubusercontent.com/${process.env.NEXT_PUBLIC_GIT_REPO}/main`
-    : "");
+    : DEFAULT_GITHUB_RAW_URL);
 
 // Local dev fallback: /data/ (static files from public/data/)
 const LOCAL_DATA_BASE = "/data";

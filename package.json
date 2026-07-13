@@ -1,6 +1,6 @@
 {
   "name": "cloudflare-affiliate-ai-hub",
-  "version": "7.0.0",
+  "version": "7.0.2",
   "private": true,
   "description": "联盟 AI 选品中心 — Next.js 16 dashboard for the Cloudflare Affiliate AI Hub.",
   "scripts": {
@@ -47,7 +47,6 @@
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "lightningcss": "^1.29.2",
-    "lightningcss-linux-x64-gnu": "^1.29.2",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
