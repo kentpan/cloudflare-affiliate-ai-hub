@@ -671,7 +671,7 @@ export default function DashboardPage() {
               icon={<Layers className="h-5 w-5" />}
               label="覆盖方向"
               value={enabledDirections.length}
-              tone="teal"
+              tone="rose"
               hint="展开桑基图"
               onClick={() => setSankeyOpen(true)}
             />
@@ -1268,15 +1268,15 @@ function StatCard({
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  tone: "emerald" | "amber" | "cyan" | "teal";
+  tone: "emerald" | "amber" | "cyan" | "rose";
   onClick?: () => void;
   hint?: string;
 }) {
   const toneMap = {
-    emerald: "from-emerald-500 to-teal-600",
+    emerald: "from-emerald-500 to-green-600",
     amber: "from-amber-500 to-orange-600",
     cyan: "from-cyan-500 to-blue-600",
-    teal: "from-teal-500 to-cyan-600",
+    rose: "from-rose-500 to-pink-600",
   }[tone];
   return (
     <Card

@@ -57,6 +57,16 @@ export async function generateDaily(opts: GenerateOptions = {}): Promise<Generat
   const dir = ensureDateDir(date);
   const useLlm = opts.useLlm ?? true;
 
+  // Overwrite semantics: if data for this date already exists (from an earlier
+  // run today), it is fully replaced. writeJson() uses fs.writeFileSync which
+  // overwrites by default. This matches the requirement: manual trigger /
+  // scheduled run / main-branch push all overwrite the same-day data with the
+  // latest results. To preserve history, each date is a separate directory.
+  const existingIndex = readJson<{ updatedAt?: string }>(dataPath(date, "summary.json"));
+  if (existingIndex) {
+    console.log(`[generator] overwriting existing data for ${date}`);
+  }
+
   // Read customization config (selection directions + keywords).
   const directions = getEnabledDirections();
   const activeKeywords = getAllActiveKeywords();

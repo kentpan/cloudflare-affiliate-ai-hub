@@ -4,6 +4,12 @@ on:
   schedule:
     # UTC 00:00 = Beijing 08:00 — daily AI selection run
     - cron: '0 0 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/daily-picker.yml'
+      - 'scripts/**'
+      - 'web/src/lib/affiliate/**'
   workflow_dispatch:
     # Allow manual trigger with optional date / LLM key / use_llm override
     inputs:
@@ -23,21 +29,23 @@ on:
 permissions:
   contents: write
   actions: read
+  pages: write
+  deployments: write
 
 jobs:
   pick:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      date: ${{ steps.picker.outputs.date }}
+      total: ${{ steps.picker.outputs.total }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node v22 LTS
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            web/package.json
-            scripts/package.json
 
       # Install the web app deps first (the scripts package reuses the shared
       # affiliate library from ../web/src/lib/affiliate/).
@@ -216,10 +224,72 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "View full data in the uploaded artifact or the committed \`.data/\` directory." >> "$GITHUB_STEP_SUMMARY"
 
+  # Deploy job — runs AFTER pick completes, builds the web app with the latest
+  # .data/ and deploys to Cloudflare Pages (or uploads artifact if no CF token).
+  # This ensures the serial flow: pick → commit .data → build web → deploy.
+  deploy:
+    runs-on: ubuntu-latest
+    needs: pick
+    if: success()
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Pull the latest .data/ that the pick job just committed
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node v22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install web deps
+        working-directory: ./web
+        run: npm ci || npm install
+
+      - name: Build web (with latest .data/)
+        working-directory: ./web
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-${{ needs.pick.outputs.date }}
+          path: web/.next
+          retention-days: 7
+
+      # Deploy to Cloudflare Pages if CLOUDFLARE_API_TOKEN is configured.
+      # Otherwise, the build artifact is uploaded above for manual deployment.
+      - name: Deploy to Cloudflare Pages
+        if: ${{ vars.ENABLE_CLOUDFLARE_PAGES == 'true' }}
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: affiliate-ai-hub
+          directory: web/.next/standalone
+          # The standalone build includes .next + public + server.js
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Summary
+        run: |
+          echo "### 🌐 Deploy Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Build**: ✅ Web built with latest \`.data/${{ needs.pick.outputs.date }}/\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Artifact**: web-build-${{ needs.pick.outputs.date }} (7-day retention)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ vars.ENABLE_CLOUDFLARE_PAGES }}" ] && [ "${{ vars.ENABLE_CLOUDFLARE_PAGES }}" = "true" ]; then
+            echo "- **Cloudflare Pages**: ✅ Deployed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- **Cloudflare Pages**: ⏭️ Skipped (set ENABLE_CLOUDFLARE_PAGES=true + CLOUDFLARE_API_TOKEN secret to enable)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # Failure notification job — runs if pick fails
   notify-failure:
     runs-on: ubuntu-latest
-    needs: pick
+    needs: [pick, deploy]
     if: failure()
     steps:
       - name: Create failure issue

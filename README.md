@@ -103,6 +103,8 @@ affiliate-ai-hub/
 >
 > 手动输入的 key 优先于 repo Secret，适合临时测试不同 key 的场景。
 
+> 🔄 **数据覆盖规则**：同一日期的数据会被覆盖更新。无论是手动执行（workflow_dispatch）、定时任务（每日 08:00）、还是 main 分支 push 触发的选品，都会用最新结果**覆盖当天**的 `.data/{date}/` 数据。历史日期的数据保持不变（每天一个独立目录）。
+
 > 🔧 **Node 版本**：两个 workflow 使用 Node v22 LTS（满足 ≥ v20 要求，避免 GitHub Actions Node 20 弃用警告）。
 
 ### 本地开发
