@@ -111,6 +111,7 @@ export function TrendingProductCard({
             <Link
               href={`/product/${product.platform}/${product.id}`}
               onClick={(e) => e.stopPropagation()}
+              prefetch={false}
               className="after:absolute after:inset-0"
               aria-label={product.title}
             >
