@@ -44,13 +44,15 @@ on:
         required: false
         default: ''
   push:
-    branches: [main]
+    # branches: [main]
+
     # Only trigger the deploy job when non-.data files change.
     # .data/*.json commits (from the pick job) are ignored.
     # NOTE: we do NOT ignore '**/*.json' globally — that would also skip
     # deploys when package.json / tsconfig.json change.
-    paths-ignore:
-      - '.data/**'
+
+    # paths-ignore:
+    #   - '.data/**'
 
 permissions:
   contents: write
