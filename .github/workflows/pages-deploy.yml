@@ -1,22 +1,24 @@
-name: Deploy to Cloudflare Pages (Auto on Push)
+# 通用 Cloudflare Pages 发布脚本(由 deploy.config.js 驱动)
+#
+# 每个项目只需修改根目录 deploy.config.js 即可复用本工作流:
+#   - projectName       — Pages 项目名(必填)
+#   - buildCommand      — 项目构建命令
+#   - pagesBuildCommand — Cloudflare Pages 适配构建命令
+#   - outputDir         — 部署输出目录
+#   - dataToPublic      — 可选, 把本地数据目录复制到 public/ 随站点发布
+#   - staticExclude     — 可选, 绕过 worker 直接命中静态文件的路径
+#   - buildEnv          — 可选, 构建时注入的环境变量
+#   - secrets           — 可选, 写入 Pages 项目的 secrets 映射
+#   - d1Name / kvName   — 可选, D1 / KV 绑定
+#
+# 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置:
+#   CLOUDFLARE_API_TOKEN  — Cloudflare API Token(需 Pages:Edit 权限)
+#   ENCRYPTION_KEY        — 加密密钥(与本地 .env 一致, 32 位)
+#   ADMIN_SECRET          — 管理界面登录密码(可选)
+#   GH_TOKEN              — (可选) GitHub PAT, 写入 Pages 供 AI选品按钮触发工作流
+#   DEMO_TOKEN            — (可选) 演示用户登录令牌, 多个用逗号分隔
 
-# 自动部署：每次推送到 main / master 分支（或手动触发）时，
-# 构建 Next.js 应用（@cloudflare/next-on-pages）并部署到 Cloudflare Pages。
-#
-# 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置：
-#   CLOUDFLARE_API_TOKEN  — Cloudflare API Token（需 Pages:Edit 权限）
-#   ENCRYPTION_KEY        — 加密密钥（与本地 .env 一致，32 位）
-#   ADMIN_SECRET            — 管理界面登录密码（可选，留空则开放模式）
-#
-# 可选环境变量（workflow_dispatch 手动触发时可输入）：
-#   PROJECT_NAME   — Pages 项目名（默认 affiliate-ai-hub）
-#
-# 可选 secret（提升体验，非必填）：
-#   GH_TOKEN  — GitHub PAT（需 repo + actions/workflow 权限）。
-#               配置后:① 写入 Pages 作为 GITHUB_TOKEN,提升数据接口 GitHub API 限流;
-#                       ② AI 选品按钮可通过它触发 daily-picker.yml。
-# 部署时 wrangler 会把以下运行变量写入 Pages 项目(凭证管理面板需要):
-#   CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_PAGES_PROJECT
+name: Deploy to Cloudflare Pages (Generic)
 
 on:
   push:
@@ -24,9 +26,9 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Pages 项目名称'
+        description: 'Pages 项目名称(留空则读取 deploy.config.js)'
         required: false
-        default: 'affiliate-ai-hub'
+        default: ''
         type: string
 
 permissions:
@@ -42,15 +44,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || '' }}
     env:
-      # 优先使用 API Token（细粒度，推荐）；fallback 到 Global API Key + Email
+      # 优先使用 API Token(细粒度, 推荐); fallback 到 Global API Key + Email
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
       CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
-      # 可选:GitHub PAT(需 repo/actions 权限)。若配置,会写入 Pages 作为 GITHUB_TOKEN,
-      # 用于提升 GitHub API 限流 + AI选品按钮触发 daily-picker 工作流。
+      # 可选: GitHub PAT(需 repo/actions 权限)。写入 Pages 作为 GITHUB_TOKEN,
+      # 供 AI 选品按钮触发 daily-picker 工作流 / 提升 GitHub API 限流。
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      # 可选: 演示用户登录令牌, 多个用逗号分隔(如 "demo1,demo2")。
+      # 写入 Pages 后, 演示用户可用任一 token 登录, 无法触发 AI 选品。
+      DEMO_TOKEN: ${{ secrets.DEMO_TOKEN }}
     steps:
       - uses: actions/checkout@v5
 
@@ -79,6 +84,50 @@ jobs:
           fi
           echo "✓ Required secrets present."
 
+      - name: Read deploy.config.js
+        id: deploy-config
+        shell: bash
+        run: |
+          # 读取 deploy.config.js 配置(ESM 格式, 与 scripts/pages-deploy-demo.yml 一致)。
+          # 命令输入参数优先(workflow_dispatch project_name), 否则用配置文件。
+          PROJECT_NAME="${{ inputs.project_name }}"
+          if [ -z "$PROJECT_NAME" ]; then
+            PROJECT_NAME=$(node -e "import('./deploy.config.js').then(m => console.log(m.default.projectName || ''))")
+          fi
+
+          # 一次 import 输出所有字段为 KEY=VALUE 行, 写入 GITHUB_ENV
+          node -e "import('./deploy.config.js').then(m => {
+            const c = m.default || {};
+            const out = {
+              BUILD_CMD: c.buildCommand || 'npm run build',
+              PAGES_BUILD_CMD: c.pagesBuildCommand || '',
+              OUTPUT_DIR: c.outputDir || '.vercel/output/static',
+              DATA_SRC: (c.dataToPublic && c.dataToPublic.source) || '',
+              DATA_TGT: (c.dataToPublic && c.dataToPublic.target) || '',
+              STATIC_EXCLUDE: JSON.stringify(c.staticExclude || []),
+              SECRETS_MAP: JSON.stringify(c.secrets || {}),
+              RUNTIME_SECRETS: JSON.stringify(c.runtimeSecrets || []),
+              D1_NAME: c.d1Name || '',
+              KV_NAME: c.kvName || '',
+              D1_ID: c.d1Id || '',
+              KV_ID: c.kvId || '',
+            };
+            for (const [k, v] of Object.entries(out)) console.log(k + '=' + v);
+          })" >> "$GITHUB_ENV"
+
+          echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_ENV"
+          echo "::notice::配置: project=$PROJECT_NAME, output=$(grep '^OUTPUT_DIR=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
+          cat "$GITHUB_ENV" | grep -E '^(PROJECT_NAME|BUILD_CMD|OUTPUT_DIR|DATA_SRC|DATA_TGT|D1_NAME|KV_NAME)=' 
+
+      - name: Validate projectName
+        shell: bash
+        run: |
+          if [ -z "${{ env.PROJECT_NAME }}" ]; then
+            echo "::error::deploy.config.js 中 projectName 为空! 请设置 Cloudflare Pages 项目名称。"
+            exit 1
+          fi
+          echo "✅ projectName: ${{ env.PROJECT_NAME }}"
+
       - name: Resolve Cloudflare Account ID
         shell: bash
         run: |
@@ -90,79 +139,78 @@ jobs:
           echo "Resolved Account ID: $ACCOUNT_ID"
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
-      - name: Resolve project name
-        shell: bash
-        run: |
-          PROJECT_NAME="${{ inputs.project_name || 'affiliate-ai-hub' }}"
-          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
-          echo "Resolved: project=$PROJECT_NAME"
-
-      - name: Copy .data to public/data (deploy data with site)
+      # ── 数据目录 → public/(可选) ──
+      # 把本地数据(如 .data)复制到 public/, 随站点部署为静态文件。
+      - name: Copy data to public (deploy data with site)
+        if: env.DATA_SRC != '' && env.DATA_TGT != ''
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p public/data
-          # 用 rsync/cp 把 .data 全部数据复制到 public/data,随站点部署。
-          # 这样 /data/* 路径直接命中静态文件,不依赖 GitHub API,无限流。
-          cp -r .data/. public/data/
-          echo "✓ Copied $(find public/data -type f | wc -l) data files to public/data/"
-          echo "=== sample ==="
-          ls public/data/ | head -5
+          mkdir -p "$(dirname "$DATA_TGT")"
+          cp -r "$DATA_SRC/." "$DATA_TGT/"
+          echo "✓ Copied $(find "$DATA_TGT" -type f | wc -l) data files from $DATA_SRC to $DATA_TGT/"
+
+      - name: Read build env from deploy.config.js
+        id: build-env
+        shell: bash
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          # 把 deploy.config.js 的 buildEnv 写入 GITHUB_ENV, 供 Build 步骤注入。
+          # deploy.config.js 中的 {GITHUB_REPOSITORY} 占位符会被替换为实际仓库名。
+          node -e "import('./deploy.config.js').then(m => {
+            const c = m.default || {};
+            const envMap = c.buildEnv || {};
+            const repo = process.env.GITHUB_REPO || '';
+            for (const [k, v] of Object.entries(envMap)) {
+              const resolved = String(v).replaceAll('{GITHUB_REPOSITORY}', repo);
+              console.log(k + '=' + resolved);
+            }
+          })" >> "$GITHUB_ENV"
+          echo "::notice::buildEnv applied"
 
       - name: Install dependencies
         shell: bash
         run: npm install
 
-      - name: Build Next.js
+      - name: Build project
         shell: bash
-        run: npm run build
+        run: |
+          if [ -n "$PAGES_BUILD_CMD" ]; then
+            $PAGES_BUILD_CMD
+          else
+            $BUILD_CMD
+          fi
         env:
-          NEXT_PUBLIC_GIT_REPO: ${{ github.repository }}
-          NEXT_PUBLIC_DATA_URL: https://raw.githubusercontent.com/${{ github.repository }}/main
+          # 来自 deploy.config.js 的 buildEnv(在 Read build env 步骤写入 GITHUB_ENV)
+          NEXT_PUBLIC_GIT_REPO: ${{ env.NEXT_PUBLIC_GIT_REPO }}
+          NEXT_PUBLIC_DATA_URL: ${{ env.NEXT_PUBLIC_DATA_URL }}
 
-      - name: Build for Cloudflare Pages
-        shell: bash
-        run: npx @cloudflare/next-on-pages@1
-
-      - name: Route /data/* to static files (bypass worker)
+      # ── 静态路由排除(可选) ──
+      # 把 STATIC_EXCLUDE 列表加入 _routes.json 的 exclude, 绕过 worker 直接命中静态文件。
+      - name: Route static paths to files (bypass worker)
+        if: env.STATIC_EXCLUDE != '[]'
         shell: bash
         run: |
           set -euo pipefail
-          ROUTES=".vercel/output/static/_routes.json"
+          ROUTES="$OUTPUT_DIR/_routes.json"
           if [ -f "$ROUTES" ]; then
-            # 把 /data/* 加入 exclude,使其绕过 worker 直接命中静态文件(更快、无 GitHub API 依赖)。
-            # 使用 python3 或 node 修改 JSON,避免 jq 依赖。
-            if command -v node >/dev/null 2>&1; then
-              node -e '
-                const fs = require("fs");
-                const p = ".vercel/output/static/_routes.json";
-                const data = JSON.parse(fs.readFileSync(p, "utf8"));
-                if (!data.exclude.includes("/data/*")) data.exclude.push("/data/*");
-                fs.writeFileSync(p, JSON.stringify(data));
-                console.log("routes.json exclude:", data.exclude.join(","));
-              '
-            else
-              echo "::error::node not found — cannot route /data/* to static"
-              exit 1
-            fi
+            EXCLUDES=$(node -e 'const fs=require("fs");const p=process.argv[1];const paths=JSON.parse(process.argv[2]);const d=JSON.parse(fs.readFileSync(p,"utf8"));for(const x of paths){if(!d.exclude.includes(x))d.exclude.push(x);}fs.writeFileSync(p,JSON.stringify(d));console.log("exclude:",d.exclude.join(","));' "$ROUTES" "$STATIC_EXCLUDE")
+            echo "✓ $EXCLUDES"
           else
-            echo "::warning::_routes.json not found — cannot route /data/* to static"
+            echo "::warning::_routes.json not found — cannot apply static excludes"
           fi
 
       - name: Verify build output
         shell: bash
         run: |
-          # @cloudflare/next-on-pages 输出到 .vercel/output/static
-          if [ ! -d ".vercel/output/static" ]; then
-            echo "::error::Build output .vercel/output/static not found — build failed."
-            echo "=== .vercel/output/static contents (if any) ==="
-            ls -la .vercel/output/static/ 2>/dev/null || echo "(no output directory at all)"
-            echo "=== cwd contents ==="
-            ls -la | head -30
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            echo "::error::Build output $OUTPUT_DIR not found — build failed."
+            ls -la "$OUTPUT_DIR" 2>/dev/null || echo "(no output directory at all)"
             exit 1
           fi
-          echo "✓ Build output verified: .vercel/output/static exists"
-          ls -la .vercel/output/static/ | head -20
+          echo "✓ Build output verified: $OUTPUT_DIR"
+          ls -la "$OUTPUT_DIR" | head -20
 
       - name: Create Pages project if not exists
         shell: bash
@@ -172,8 +220,7 @@ jobs:
           echo "=== Cloudflare auth check (wrangler whoami) ==="
           wrangler whoami 2>&1 || true
 
-          # 用 awk 取项目列表第一列做精确匹配,避免 grep -qF 子串匹配误判
-          # (例如 "affiliate-ai-hub" 会被 "cloudflare-affiliate-ai-hub" 误匹配而跳过创建)
+          # 用 awk 取项目列表第一列做精确匹配, 避免 grep -qF 子串匹配误判
           if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
             echo "Pages project '$PROJECT_NAME' already exists, skipping creation"
           else
@@ -181,12 +228,11 @@ jobs:
             wrangler pages project create "$PROJECT_NAME" --production-branch main
             echo "Created Pages project '$PROJECT_NAME'"
 
-            # 验证创建成功（确认项目已进入列表,同样用精确匹配）
             if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
               echo "Verification passed: project '$PROJECT_NAME' now exists"
             else
               echo "::error::wrangler pages project create 执行完毕但项目仍未出现在列表中"
-              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限,或账号 ID 无法解析"
+              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限, 或账号 ID 无法解析"
               exit 1
             fi
           fi
@@ -202,16 +248,26 @@ jobs:
             exit 1
           }
 
-          # ── 业务 secrets (加密密钥 + 管理密码) ──
-          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
-          if [ -n "$ADMIN_SECRET" ]; then
-            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
-          fi
+          # ── 业务 secrets (来自 deploy.config.js 的 secrets 映射) ──
+          # SECRETS_MAP 格式: JSON 对象 { "WORKFLOW_ENV_NAME": "PAGES_SECRET_NAME" }
+          # 从同名 job env 读取值, 写入 Pages。
+          echo "$SECRETS_MAP" | node -e '
+            const fs = require("fs");
+            const map = JSON.parse(fs.readFileSync(0, "utf8"));
+            for (const [src, tgt] of Object.entries(map)) {
+              console.log(`${src}\t${tgt}`);
+            }
+          ' | while IFS=$'\t' read -r src tgt; do
+            value="${!src:-}"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | wrangler pages secret put "$tgt" --project-name "$PROJECT_NAME"
+              echo "✓ secret $tgt written (from $src)"
+            else
+              echo "ℹ️ secret $src not set — skipped"
+            fi
+          done
 
-          # ── Cloudflare 运行变量 (凭证管理面板需要) ──
-          # 写入后,凭证面板检测到 CLOUDFLARE_* 齐全即可通过 CF API 写入业务凭证。
-          # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_PAGES_PROJECT
-          # 均为运行时环境变量,允许 Web 端调用 Cloudflare REST API。
+          # ── Cloudflare 运行变量(凭证面板需要) ──
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is empty — cannot write runtime env."
             exit 1
@@ -220,24 +276,19 @@ jobs:
             echo "::error::CLOUDFLARE_ACCOUNT_ID is empty — cannot write runtime env."
             exit 1
           fi
-
-          # 用 wrangler pages secret put 写入 (Pages 将 secret 作为运行时 env 注入)
           printf '%s' "$CLOUDFLARE_API_TOKEN" | wrangler pages secret put CLOUDFLARE_API_TOKEN --project-name "$PROJECT_NAME"
           printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | wrangler pages secret put CLOUDFLARE_ACCOUNT_ID --project-name "$PROJECT_NAME"
           printf '%s' "$PROJECT_NAME" | wrangler pages secret put CLOUDFLARE_PAGES_PROJECT --project-name "$PROJECT_NAME"
 
-          # GITHUB_TOKEN (可选):若仓库配置了 GH_TOKEN,写入以提升 GitHub API 限流
-          if [ -n "$GH_TOKEN" ]; then
-            printf '%s' "$GH_TOKEN" | wrangler pages secret put GITHUB_TOKEN --project-name "$PROJECT_NAME"
-            echo "✓ GITHUB_TOKEN written (from GH_TOKEN secret)"
-          fi
+          # ── 可选的 D1 / KV 绑定(wrangler.toml 由 demo 模板驱动) ──
+          # 本项目未使用 D1/KV, 如需可参考 scripts/pages-deploy-demo.yml 的 Generate wrangler.toml 步骤。
 
           echo "✓ Secrets configured"
 
       - name: Deploy to Cloudflare Pages
         shell: bash
         run: |
-          wrangler pages deploy .vercel/output/static --project-name "$PROJECT_NAME" --branch main --commit-dirty
+          wrangler pages deploy "$OUTPUT_DIR" --project-name "$PROJECT_NAME" --branch main --commit-dirty
 
           # Resolve the real *.pages.dev subdomain via the CF API
           PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
@@ -256,6 +307,9 @@ jobs:
           echo "| 配置项 | 值 |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| Pages 项目 | $PROJECT_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| 输出目录 | $OUTPUT_DIR |" >> $GITHUB_STEP_SUMMARY
+          echo "| D1 数据库 | ${{ env.D1_NAME || '(未配置)' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| KV 命名空间 | ${{ env.KV_NAME || '(未配置)' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发分支 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发方式 | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 访问地址 | ${{ env.DEPLOY_URL || '(部署失败)' }} |" >> $GITHUB_STEP_SUMMARY

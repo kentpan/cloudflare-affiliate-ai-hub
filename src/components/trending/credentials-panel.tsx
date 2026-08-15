@@ -56,6 +56,7 @@ interface EnvInfo {
 interface CredentialsPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  role?: "admin" | "demo" | null;
 }
 
 const ENV_ICONS: Record<EnvInfo["env"], React.ReactNode> = {
@@ -64,7 +65,8 @@ const ENV_ICONS: Record<EnvInfo["env"], React.ReactNode> = {
   local: <FileText className="h-3.5 w-3.5 text-emerald-500" />,
 };
 
-export function CredentialsPanel({ open, onOpenChange }: CredentialsPanelProps) {
+export function CredentialsPanel({ open, onOpenChange, role }: CredentialsPanelProps) {
+  const isDemo = role === "demo";
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [envInfo, setEnvInfo] = useState<EnvInfo | null>(null);
@@ -155,9 +157,16 @@ export function CredentialsPanel({ open, onOpenChange }: CredentialsPanelProps) 
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-muted-foreground" />
             联盟 API 凭证配置
+            {isDemo && (
+              <Badge variant="outline" className="h-4 px-1.5 text-[9px] text-amber-600 dark:text-amber-400">
+                演示用户
+              </Badge>
+            )}
           </DialogTitle>
           <DialogDescription>
-            配置各联盟平台 API 密钥。无凭证的平台自动使用 mock 数据。
+            {isDemo
+              ? "演示用户配置的凭证与其他用户相互隔离(DEMO_ 前缀),仅用于本演示会话,不影响管理员凭证。"
+              : "配置各联盟平台 API 密钥。无凭证的平台自动使用 mock 数据。"}
           </DialogDescription>
         </DialogHeader>
 

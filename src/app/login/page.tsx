@@ -3,7 +3,7 @@
 import { Suspense, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { KeyRound, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { KeyRound, Loader2, Lock, ShieldCheck, User, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
@@ -22,15 +22,15 @@ import { toast } from "sonner";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [secret, setSecret] = useState("");
+  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
 
   const redirectTarget = searchParams.get("redirect") || "/";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!secret.trim()) {
-      toast.error("请输入管理密钥");
+    if (!token.trim()) {
+      toast.error("请输入登录令牌");
       return;
     }
     setLoading(true);
@@ -38,15 +38,15 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: secret.trim() }),
+        body: JSON.stringify({ token: token.trim() }),
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        toast.success("验证通过,正在跳转...");
+        toast.success(data.role === "demo" ? "演示用户验证通过,正在跳转..." : "验证通过,正在跳转...");
         router.push(redirectTarget);
         router.refresh();
       } else {
-        toast.error(data.error || "密钥错误,请重试");
+        toast.error(data.error || "令牌错误,请重试");
       }
     } catch (err) {
       toast.error("网络错误,请重试");
@@ -68,26 +68,26 @@ function LoginForm() {
             <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">管理面板登录</h1>
+            <h1 className="text-2xl font-bold tracking-tight">登录</h1>
             <p className="text-sm text-muted-foreground">
-              联盟 AI 选品中心 · 请输入管理密钥以继续
+              联盟 AI 选品中心 · 请输入登录令牌以继续
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="admin-secret" className="text-sm font-medium">
-              ADMIN_SECRET 管理密钥
+            <label htmlFor="auth-token" className="text-sm font-medium">
+              登录令牌 (ADMIN_SECRET 或 DEMO_TOKEN)
             </label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                id="admin-secret"
+                id="auth-token"
                 type="password"
-                placeholder="输入管理密钥..."
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
+                placeholder="输入登录令牌..."
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
                 className="pl-9"
                 autoFocus
                 autoComplete="current-password"
@@ -99,7 +99,7 @@ function LoginForm() {
           <Button
             type="submit"
             className="w-full"
-            disabled={loading || !secret.trim()}
+            disabled={loading || !token.trim()}
           >
             {loading ? (
               <>
@@ -115,12 +115,16 @@ function LoginForm() {
           </Button>
         </form>
 
-        <div className="text-center text-xs text-muted-foreground border-t pt-4">
-          <p>
-            密钥已通过 ADMIN_SECRET 环境变量配置。
-            <br />
-            登录后将获得 30 天的会话有效期。
+        <div className="space-y-2 text-center text-xs text-muted-foreground border-t pt-4">
+          <p className="flex items-center justify-center gap-1">
+            <UserCog className="w-3 h-3" />
+            管理员:使用 ADMIN_SECRET 登录,拥有完整权限(含 AI 选品触发)。
           </p>
+          <p className="flex items-center justify-center gap-1">
+            <User className="w-3 h-3" />
+            演示用户:使用 DEMO_TOKEN 登录,可浏览数据与配置演示凭证,但无法触发 AI 选品。
+          </p>
+          <p className="mt-1">登录后将获得 30 天的会话有效期。</p>
         </div>
       </div>
     </motion.div>
@@ -140,9 +144,9 @@ function LoginFallback() {
             <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">管理面板登录</h1>
+            <h1 className="text-2xl font-bold tracking-tight">登录</h1>
             <p className="text-sm text-muted-foreground">
-              联盟 AI 选品中心 · 请输入管理密钥以继续
+              联盟 AI 选品中心 · 请输入登录令牌以继续
             </p>
           </div>
         </div>

@@ -3,10 +3,15 @@
 // This route triggers that workflow via GitHub repository_dispatch API, using GH_TOKEN
 // that was written to the Pages project at deploy time (see pages-deploy.yml).
 // On local dev (Node.js), this route runs in Node.js and can generate data directly.
+//
+// ACCESS CONTROL:
+//   - Only admin users (ADMIN_SECRET) may trigger AI selection.
+//   - Demo users (DEMO_TOKEN) get 403 — "演示用户无法进行此操作".
 
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
+import { isAuthenticated } from "@/lib/auth";
 
 export const maxDuration = 300;
 
@@ -34,6 +39,21 @@ async function triggerDailyPicker(repo: string, token: string, date?: string) {
 }
 
 export async function POST(request: Request) {
+  // Demo users cannot trigger AI selection
+  const auth = await isAuthenticated(request);
+  if (auth.configured && !auth.authenticated) {
+    return NextResponse.json({
+      ok: false,
+      error: "未登录,请先登录后再操作",
+    }, { status: 401 });
+  }
+  if (auth.role === "demo") {
+    return NextResponse.json({
+      ok: false,
+      error: "演示用户无法进行此操作",
+    }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") ?? "";
 

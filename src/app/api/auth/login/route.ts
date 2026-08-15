@@ -1,28 +1,34 @@
-// POST /api/auth/login — verify ADMIN_SECRET and set auth cookie.
+// POST /api/auth/login — verify a token (ADMIN_SECRET or DEMO_TOKEN) and set auth cookie.
 //
-// Request:  { "secret": "<user-entered-admin-secret>" }
-// Response: { "ok": true } on success, { "ok": false, "error": "..." } on failure
+// Request:  { "token": "<user-entered-token>" }
+// Response: { "ok": true, "role": "admin"|"demo" } on success,
+//            { "ok": false, "error": "..." } on failure
 //
 // On success, sets the `affiliate_auth` cookie (httpOnly, 30 days) to
-// hex(SHA-256(ADMIN_SECRET + "affiliate-ai-hub-v1")).
+// "<role>:hex(SHA-256(token + salt))".
 
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
-import { computeAuthCookieValue, AUTH_COOKIE_NAME } from "@/lib/auth";
+import {
+  computeAuthCookieValue,
+  AUTH_COOKIE_NAME,
+  validateLoginToken,
+} from "@/lib/auth";
 
 export async function POST(request: Request) {
-  const adminSecret = process.env.ADMIN_SECRET;
+  const hasAdmin = !!process.env.ADMIN_SECRET;
+  const hasDemo = (process.env.DEMO_TOKEN || "").split(",").some((t) => t.trim());
 
-  if (!adminSecret) {
-    // No secret configured — no login needed
+  if (!hasAdmin && !hasDemo) {
+    // No auth configured — no login needed
     return NextResponse.json(
-      { ok: false, error: "ADMIN_SECRET not configured" },
+      { ok: false, error: "No authentication configured (ADMIN_SECRET / DEMO_TOKEN)" },
       { status: 400 },
     );
   }
 
-  let body: { secret?: string } = {};
+  let body: { token?: string } = {};
   try {
     body = await request.json();
   } catch {
@@ -32,30 +38,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const provided = body.secret || "";
+  const provided = body.token || "";
   if (!provided) {
     return NextResponse.json(
-      { ok: false, error: "Secret is required" },
+      { ok: false, error: "Token is required" },
       { status: 400 },
     );
   }
 
-  if (provided !== adminSecret) {
+  const result = await validateLoginToken(provided);
+  if (!result) {
     return NextResponse.json(
-      { ok: false, error: "Invalid secret" },
+      { ok: false, error: "Invalid token" },
       { status: 401 },
     );
   }
 
-  // Compute the auth cookie value
-  const cookieValue = await computeAuthCookieValue(adminSecret);
+  // Compute the auth cookie value with role prefix
+  const cookieValue = await computeAuthCookieValue(provided);
 
   // Set cookie (30 days, httpOnly, sameSite=lax)
   const maxAge = 60 * 60 * 24 * 30; // 30 days
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true, role: result.role });
   response.headers.set(
     "Set-Cookie",
-    `${AUTH_COOKIE_NAME}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`,
+    `${AUTH_COOKIE_NAME}=${result.role}:${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`,
   );
   return response;
 }

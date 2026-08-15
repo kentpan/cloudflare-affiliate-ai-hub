@@ -5,6 +5,11 @@
 //                          local → .env file (eval-require fs) or return content for download (edge)
 //                        Always returns masked values — never plaintext.
 //
+// USER ISOLATION:
+//   - Admin sessions (ADMIN_SECRET) read/write standard keys (e.g. LLMAI_APIKEY).
+//   - Demo sessions (DEMO_TOKEN) read/write prefixed keys (e.g. DEMO_LLMAI_APIKEY),
+//     fully isolated from admin credentials.
+//
 // EDGE RUNTIME: This route uses `runtime = "edge"` so it's compatible with
 // @cloudflare/next-on-pages builds. All Node.js-specific APIs (fs, Buffer)
 // are loaded dynamically via eval-require and only in code paths that
@@ -15,6 +20,7 @@ export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { getEnvInfo } from "@/lib/affiliate/env";
 import { maskValue, writeCredentials } from "@/lib/affiliate/credential-writer";
+import { isAuthenticated, type AuthRole } from "@/lib/auth";
 
 const CREDENTIAL_KEYS = [
   { key: "LLMAI_APIKEY", label: "AI 推理密钥", group: "AI 推理", required: true, mask: true },
@@ -35,9 +41,30 @@ const CREDENTIAL_KEYS = [
   { key: "RECEIVE_TOKEN", label: "推送 Token", group: "推送目标", mask: true },
 ];
 
-export async function GET() {
+const DEMO_PREFIX = "DEMO_";
+
+/**
+ * Get the effective credential key definitions for a role.
+ * Demo users get DEMO_-prefixed keys so their credentials never collide
+ * with admin credentials (full isolation).
+ */
+function getKeysForRole(role: AuthRole) {
+  if (role === "demo") {
+    return CREDENTIAL_KEYS.map((def) => ({
+      ...def,
+      key: DEMO_PREFIX + def.key,
+    }));
+  }
+  return CREDENTIAL_KEYS;
+}
+
+export async function GET(request: Request) {
+  const auth = await isAuthenticated(request);
+  const role = auth.authenticated ? (auth.role ?? "admin") : "admin";
+  const keys = getKeysForRole(role);
+
   const envInfo = getEnvInfo();
-  const credentials = CREDENTIAL_KEYS.map((def) => {
+  const credentials = keys.map((def) => {
     const value = process.env[def.key] ?? "";
     return {
       ...def,
@@ -50,10 +77,17 @@ export async function GET() {
           : value, // non-secret values (URLs, model names) shown as-is
     };
   });
-  return NextResponse.json({ credentials, envInfo });
+  return NextResponse.json({ credentials, envInfo, role });
 }
 
 export async function PUT(request: Request) {
+  const auth = await isAuthenticated(request);
+  if (!auth.authenticated) {
+    return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
+  }
+  const role = auth.role ?? "admin";
+  const keys = getKeysForRole(role);
+
   const envInfo = getEnvInfo();
 
   if (!envInfo.writable) {
@@ -71,9 +105,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Convert to entries, filtering to known keys only (security: don't allow
-  // arbitrary env var writes)
-  const knownKeys = new Set(CREDENTIAL_KEYS.map((k) => k.key));
+  // Convert to entries, filtering to keys the current role may write.
+  // Security: don't allow arbitrary env var writes, and never allow a demo
+  // user to write admin keys.
+  const knownKeys = new Set(keys.map((k) => k.key));
   const entries = Object.entries(body)
     .filter(([key]) => knownKeys.has(key))
     .map(([key, value]) => ({ key, value: String(value ?? "") }));
