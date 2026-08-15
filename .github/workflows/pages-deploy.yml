@@ -120,21 +120,29 @@ jobs:
       - name: Create Pages project if not exists
         shell: bash
         run: |
+          set -euo pipefail
+
+          # 显式传入 account-id，避免 wrangler 无法解析账号导致 "Project does not exist" 误导报错
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty — cannot resolve Cloudflare account."
+            exit 1
+          fi
+
           # 判断项目是否存在 (用 grep -qF, 不依赖 jq)
-          if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+          if wrangler pages project list --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>/dev/null | grep -qF "$PROJECT_NAME"; then
             echo "Pages project '$PROJECT_NAME' already exists, skipping creation"
           else
-            # 项目不存在 → 用 wrangler 新建
+            # 项目不存在 → 用 wrangler 新建（显式 --account-id）
             echo "Project '$PROJECT_NAME' does not exist, creating with wrangler..."
-            wrangler pages project create "$PROJECT_NAME" --production-branch main
+            wrangler pages project create "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID" --production-branch main
             echo "Created Pages project '$PROJECT_NAME'"
 
-            # 验证创建成功
-            if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+            # 验证创建成功（确认项目已进入列表）
+            if wrangler pages project list --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>/dev/null | grep -qF "$PROJECT_NAME"; then
               echo "Verification passed: project '$PROJECT_NAME' now exists"
             else
               echo "::error::wrangler pages project create 执行完毕但项目仍未出现在列表中"
-              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限"
+              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限，或账号 ID 解析失败"
               exit 1
             fi
           fi
@@ -142,16 +150,25 @@ jobs:
       - name: Configure secrets on Pages project
         shell: bash
         run: |
-          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
+          set -euo pipefail
+
+          # 诊断:打印当前项目列表,确认 wrangler 能看到目标项目
+          echo "=== Current Pages projects (as seen by wrangler) ==="
+          wrangler pages project list --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>&1 || echo "wrangler pages project list failed"
+          echo ""
+          echo "=== Target project: $PROJECT_NAME ==="
+          echo ""
+
+          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
           if [ -n "$ADMIN_SECRET" ]; then
-            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
+            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
           fi
           echo "✓ Secrets configured"
 
       - name: Deploy to Cloudflare Pages
         shell: bash
         run: |
-          wrangler pages deploy .vercel/output/static --project-name "$PROJECT_NAME" --branch main --commit-dirty
+          wrangler pages deploy .vercel/output/static --project-name "$PROJECT_NAME" --branch main --commit-dirty --account-id "$CLOUDFLARE_ACCOUNT_ID"
 
           # Resolve the real *.pages.dev subdomain via the CF API
           PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
