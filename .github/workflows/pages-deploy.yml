@@ -1,20 +1,15 @@
 name: Deploy to Cloudflare Pages (Auto on Push)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Next.js → Cloudflare Pages 自动部署工作流
-# (基于原始 Nuxt workflow,改为 Next.js + @cloudflare/next-on-pages,去掉 D1/KV)
+# 自动部署：每次推送到 main / master 分支（或手动触发）时，
+# 构建 Next.js 应用（@cloudflare/next-on-pages）并部署到 Cloudflare Pages。
 #
-# 触发条件: 推送到 main / master 分支 或手动触发
+# 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置：
+#   CLOUDFLARE_API_TOKEN  — Cloudflare API Token（需 Pages:Edit 权限）
+#   ENCRYPTION_KEY        — 加密密钥（与本地 .env 一致，32 位）
+#   ADMIN_SECRET            — 管理界面登录密码（可选，留空则开放模式）
 #
-# 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置:
-#   1. CLOUDFLARE_API_TOKEN  (推荐) 或 CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL
-#      - API Token 需 Cloudflare Pages:Edit 权限
-#   2. ENCRYPTION_KEY        — 加密密钥 (32 位 hex)
-#   3. ADMIN_SECRET          — 管理界面登录密码 (可选,留空则开放模式)
-#
-# 可选 GitHub Variables:
-#   CLOUDFLARE_PAGES_PROJECT — Pages 项目名 (默认 affiliate-ai-hub)
-# ─────────────────────────────────────────────────────────────────────────────
+# 可选环境变量（workflow_dispatch 手动触发时可输入）：
+#   PROJECT_NAME   — Pages 项目名（默认 affiliate-ai-hub）
 
 on:
   push:
@@ -38,15 +33,14 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || '' }}
     env:
-      # 优先使用 API Token (细粒度,推荐);fallback 到 Global API Key + Email
+      # 优先使用 API Token（细粒度，推荐）；fallback 到 Global API Key + Email
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
       CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
-    # Skip when commit message contains [skip deploy] (daily-picker auto-picks)
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip deploy]') }}
     steps:
       - uses: actions/checkout@v5
 
@@ -65,19 +59,12 @@ jobs:
       - name: Verify required secrets
         shell: bash
         run: |
-          # 校验:必须配置 CLOUDFLARE_API_TOKEN 或 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL) 之一
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            if [ -z "$CLOUDFLARE_API_KEY" ] || [ -z "$CLOUDFLARE_EMAIL" ]; then
-              echo "::error::Missing Cloudflare credentials. Configure CLOUDFLARE_API_TOKEN (recommended) OR CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL as GitHub Secrets."
-              exit 1
-            fi
-            echo "⚠ Using Global API Key + Email (legacy auth). Recommend switching to API Token."
-          else
-            echo "✓ Using CLOUDFLARE_API_TOKEN (recommended)."
+            echo "::error::Missing CLOUDFLARE_API_TOKEN secret."
+            exit 1
           fi
-          # ENCRYPTION_KEY 强制要求
           if [ -z "$ENCRYPTION_KEY" ]; then
-            echo "::error::Missing ENCRYPTION_KEY secret (32-char hex used for credential encryption)."
+            echo "::error::Missing ENCRYPTION_KEY secret."
             exit 1
           fi
           echo "✓ Required secrets present."
@@ -85,13 +72,9 @@ jobs:
       - name: Resolve Cloudflare Account ID
         shell: bash
         run: |
-          # 优先使用仓库 Variable;否则从 wrangler whoami 输出解析
-          ACCOUNT_ID="${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+          ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
           if [ -z "$ACCOUNT_ID" ]; then
-            ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
-          fi
-          if [ -z "$ACCOUNT_ID" ]; then
-            echo "::error::Could not resolve Cloudflare Account ID. Set CLOUDFLARE_ACCOUNT_ID repo variable or ensure API token has 'User Details: Read' permission."
+            echo "::error::Could not resolve Cloudflare Account ID. Check your API token has the 'User Details: Read' permission."
             exit 1
           fi
           echo "Resolved Account ID: $ACCOUNT_ID"
@@ -100,28 +83,13 @@ jobs:
       - name: Resolve project name
         shell: bash
         run: |
-          PROJECT_NAME="${{ inputs.project_name || vars.CLOUDFLARE_PAGES_PROJECT || 'affiliate-ai-hub' }}"
+          PROJECT_NAME="${{ inputs.project_name || 'affiliate-ai-hub' }}"
           echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
           echo "Resolved: project=$PROJECT_NAME"
 
       - name: Install dependencies
         shell: bash
-        run: npm ci --no-audit --no-fund
-
-      - name: Remove nodejs-only routes for CF Pages build
-        shell: bash
-        run: |
-          # @cloudflare/next-on-pages requires ALL routes to use the Edge Runtime.
-          # The /data/[...path] route uses nodejs runtime (fs/promises) for
-          # fast local file access during development. On CF Pages, this route
-          # is not needed — data-writer.ts falls back to the GitHub Contents API.
-          echo "Removing nodejs-only route: src/app/data/[...path]/route.ts"
-          rm -rf "src/app/data/[...path]"
-          if [ -d "src/app/data/[...path]" ]; then
-            echo "::error::Failed to remove src/app/data/[...path]"
-            exit 1
-          fi
-          echo "✓ Removed nodejs-only route for CF Pages build"
+        run: npm install
 
       - name: Build Next.js
         shell: bash
@@ -138,70 +106,42 @@ jobs:
         shell: bash
         run: |
           # @cloudflare/next-on-pages 输出到 .vercel/output/static
-          if [ ! -d "dist" ] && [ ! -d ".vercel/output/static" ]; then
-            echo "::error::Build output not found — @cloudflare/next-on-pages failed."
+          if [ ! -d ".vercel/output/static" ]; then
+            echo "::error::Build output .vercel/output/static not found — build failed."
+            echo "=== .vercel/output/static contents (if any) ==="
+            ls -la .vercel/output/static/ 2>/dev/null || echo "(no output directory at all)"
             echo "=== cwd contents ==="
             ls -la | head -30
             exit 1
           fi
-          echo "✓ Build output verified"
-          ls -la .vercel/output/static | head -20
-
-      - name: Verify wrangler.toml has nodejs_compat
-        shell: bash
-        run: |
-          if [ ! -f wrangler.toml ]; then
-            echo "❌ ERROR: wrangler.toml not found!"
-            exit 1
-          fi
-          if ! grep -q "nodejs_compat" wrangler.toml; then
-            echo "❌ ERROR: nodejs_compat not found in wrangler.toml!"
-            exit 1
-          fi
-          echo "✓ wrangler.toml verified:"
-          grep -E "compatibility_date|compatibility_flags|pages_build_output_dir" wrangler.toml
+          echo "✓ Build output verified: .vercel/output/static exists"
+          ls -la .vercel/output/static/ | head -20
 
       - name: Create Pages project if not exists
         shell: bash
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # wrangler 4.x bug workaround: 显式传 --account-id 避免 "project does not exist"
-          if wrangler pages project list --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+          if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
             echo "Pages project '$PROJECT_NAME' already exists"
           else
-            wrangler pages project create "$PROJECT_NAME" --production-branch main --account-id "$CLOUDFLARE_ACCOUNT_ID"
+            wrangler pages project create "$PROJECT_NAME" --production-branch main
             echo "Created Pages project '$PROJECT_NAME'"
           fi
 
       - name: Configure secrets on Pages project
         shell: bash
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # 通过 wrangler pages secret put 设置运行时环境变量
-          # wrangler 4.x bug workaround: 必须显式传 --account-id
-          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
+          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
           if [ -n "$ADMIN_SECRET" ]; then
-            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
+            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
           fi
-          echo "✓ Secrets configured (ENCRYPTION_KEY$( [ -n "$ADMIN_SECRET" ] && echo ' + ADMIN_SECRET' ))"
+          echo "✓ Secrets configured"
 
       - name: Deploy to Cloudflare Pages
         shell: bash
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # wrangler.toml 中的 pages_build_output_dir 不会自动生效,
-          # 必须在命令行显式指定部署目录
-          # wrangler 4.x bug workaround: 显式传 --account-id
-          wrangler pages deploy .vercel/output/static \
-            --project-name="$PROJECT_NAME" \
-            --branch=main \
-            --commit-dirty \
-            --account-id="$CLOUDFLARE_ACCOUNT_ID"
+          wrangler pages deploy .vercel/output/static --project-name "$PROJECT_NAME" --branch main --commit-dirty
 
-          # 通过 CF API 解析真实的 *.pages.dev 子域名
+          # Resolve the real *.pages.dev subdomain via the CF API
           PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           RAW_SUBDOMAIN=$(echo "$PROJECT_DETAILS" | jq -r '.result.subdomain // empty' | tr -d '\r\n')
@@ -220,6 +160,4 @@ jobs:
           echo "| Pages 项目 | $PROJECT_NAME |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发分支 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发方式 | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 部署目录 | .vercel/output/static |" >> $GITHUB_STEP_SUMMARY
-          echo "| 构建工具 | @cloudflare/next-on-pages |" >> $GITHUB_STEP_SUMMARY
           echo "| 访问地址 | ${{ env.DEPLOY_URL || '(部署失败)' }} |" >> $GITHUB_STEP_SUMMARY
