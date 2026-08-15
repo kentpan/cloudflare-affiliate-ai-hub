@@ -2,22 +2,18 @@ name: Deploy to Cloudflare Pages (Auto on Push)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Next.js → Cloudflare Pages 自动部署工作流
-# ─────────────────────────────────────────────────────────────────────────────
+# (基于原始 Nuxt workflow,改为 Next.js + @cloudflare/next-on-pages,去掉 D1/KV)
 #
 # 触发条件: 推送到 main / master 分支 或手动触发
-#   - 不使用 paths-ignore,确保每次 push 都触发 (更可靠)
-#   - 如果提交信息包含 [skip deploy] 或 [skip ci],job 内部会跳过部署
-#   - daily-picker.yml 的自动选品提交会带 [skip deploy] 标记,避免重复部署
 #
 # 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置:
 #   1. CLOUDFLARE_API_TOKEN  (推荐) 或 CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL
-#      - API Token 需要 Cloudflare Pages:Edit 权限
-#   2. ENCRYPTION_KEY        — 凭证加密密钥 (32 位 hex)
-#   3. ADMIN_SECRET          — 管理界面登录密码 (留空则开放模式)
+#      - API Token 需 Cloudflare Pages:Edit 权限
+#   2. ENCRYPTION_KEY        — 加密密钥 (32 位 hex)
+#   3. ADMIN_SECRET          — 管理界面登录密码 (可选,留空则开放模式)
 #
-# 可选 GitHub Variables (Settings → Secrets and variables → Actions → Variables):
+# 可选 GitHub Variables:
 #   CLOUDFLARE_PAGES_PROJECT — Pages 项目名 (默认 affiliate-ai-hub)
-#   CLOUDFLARE_ACCOUNT_ID    — Cloudflare 账户 ID (可选,可从 API Token 自动解析)
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -26,9 +22,9 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Pages 项目名称 (留空则使用 CLOUDFLARE_PAGES_PROJECT 变量或默认 affiliate-ai-hub)'
+        description: 'Pages 项目名称'
         required: false
-        default: ''
+        default: 'affiliate-ai-hub'
         type: string
 
 permissions:
@@ -43,24 +39,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # 优先使用细粒度 API Token;fallback 到 Global API Key + Email
+      # 优先使用 API Token (细粒度,推荐);fallback 到 Global API Key + Email
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
       CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
-    # Skip the entire job when the commit message contains [skip deploy] or [skip ci].
-    # daily-picker.yml's auto-pick commits use [skip deploy] to avoid triggering this workflow.
+    # Skip when commit message contains [skip deploy] (daily-picker auto-picks)
     if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip deploy]') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            ./package-lock.json
 
       - name: Install wrangler
         shell: bash
@@ -95,92 +91,18 @@ jobs:
             ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
           fi
           if [ -z "$ACCOUNT_ID" ]; then
-            echo "::error::无法解析 Cloudflare Account ID。"
-            echo ""
-            echo "解决方法: 在 GitHub 仓库 Settings → Secrets and variables → Actions → Variables"
-            echo "中添加一个 Variable:"
-            echo "  名称: CLOUDFLARE_ACCOUNT_ID"
-            echo "  值:   5cca1d8ed2751f237b35257eddeae59d  (从本次错误日志中获取)"
-            echo ""
-            echo "或者在 Cloudflare 控制台右上角点你的账户名 → 查看 Account ID。"
+            echo "::error::Could not resolve Cloudflare Account ID. Set CLOUDFLARE_ACCOUNT_ID repo variable or ensure API token has 'User Details: Read' permission."
             exit 1
           fi
           echo "Resolved Account ID: $ACCOUNT_ID"
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
-      - name: Verify token can access Cloudflare Pages
+      - name: Resolve project name
         shell: bash
         run: |
-          # 提前验证 Token 是否有 Pages 权限,避免到后面才报错
-          echo "Checking if the configured credentials can access Cloudflare Pages..."
-
-          # 用数组构建鉴权 header,避免引号嵌套问题
-          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
-            AUTH_ARGS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-            echo "Using CLOUDFLARE_API_TOKEN (Bearer auth)"
-          else
-            AUTH_ARGS=(-H "X-Auth-Key: $CLOUDFLARE_API_KEY" -H "X-Auth-Email: $CLOUDFLARE_EMAIL")
-            echo "Using CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL (Global Key auth)"
-          fi
-
-          # 调用 CF API 列出 Pages 项目
-          HTTP_CODE=$(curl -s -o /tmp/cf-check.json -w "%{http_code}" \
-            -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
-            "${AUTH_ARGS[@]}" \
-            -H "Content-Type: application/json" || echo "000")
-
-          BODY=$(cat /tmp/cf-check.json 2>/dev/null || echo "")
-          echo "HTTP status: $HTTP_CODE"
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Cloudflare API 返回 HTTP $HTTP_CODE (列出 Pages 项目时)"
-            echo "::error::响应内容: $BODY"
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "❌ 鉴权失败 — 你的凭据缺少 Cloudflare Pages 权限"
-            echo ""
-            echo "═══ 方案 A: 用 Global API Key (最简单,不用管权限) ═══"
-            echo ""
-            echo "  1. GitHub Secrets 中删除 CLOUDFLARE_API_TOKEN"
-            echo "  2. 添加两个 Secret:"
-            echo "     • CLOUDFLARE_API_KEY = Global API Key"
-            echo "     • CLOUDFLARE_EMAIL   = ayue222@126.com"
-            echo ""
-            echo "  获取 Global API Key:"
-            echo "    https://dash.cloudflare.com/profile/api-tokens"
-            echo "    → 页面下方 'Global API Key' → 点 'View' → 输入密码 → 复制"
-            echo ""
-            echo "═══ 方案 B: 编辑现有 API Token 添加权限 ═══"
-            echo ""
-            echo "  1. 打开 https://dash.cloudflare.com/profile/api-tokens"
-            echo "  2. 找到你正在用的 Token,点右边的 '编辑' (Edit)"
-            echo "  3. 在 '权限' (Permissions) 区域,点 '添加更多' (Add more)"
-            echo "  4. 添加这一条权限 (三个下拉框依次选):"
-            echo "     • 第1个下拉框选: 账户 (Account)"
-            echo "     • 第2个下拉框选: Cloudflare Pages"
-            echo "     • 第3个下拉框选: 编辑 (Edit)"
-            echo ""
-            echo "  注: 只需要这一条 'Cloudflare Pages → 编辑' 权限就够了。"
-            echo "      如果还需要 D1/KV,再加对应的权限。"
-            echo "      'Account Settings' 和 'User Details' 不需要 (已通过"
-            echo "      CLOUDFLARE_ACCOUNT_ID 变量绕过)。"
-            echo ""
-            echo "  5. 点 '继续以显示摘要' → '更新令牌' (Update Token)"
-            echo "  6. 重新触发 GitHub Actions"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            exit 1
-          fi
-          echo "✓ 凭据有 Pages 访问权限。"
-
-      - name: Resolve Pages project name
-        shell: bash
-        run: |
-          # 优先级: workflow_dispatch 输入 > 仓库 Variable > 默认值
-          INPUT_NAME="${{ inputs.project_name }}"
-          VAR_NAME="${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
-          PROJECT_NAME="${INPUT_NAME:-${VAR_NAME:-affiliate-ai-hub}}"
+          PROJECT_NAME="${{ inputs.project_name || vars.CLOUDFLARE_PAGES_PROJECT || 'affiliate-ai-hub' }}"
           echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
-          echo "Resolved Pages project: $PROJECT_NAME"
+          echo "Resolved: project=$PROJECT_NAME"
 
       - name: Install dependencies
         shell: bash
@@ -193,13 +115,8 @@ jobs:
           # The /data/[...path] route uses nodejs runtime (fs/promises) for
           # fast local file access during development. On CF Pages, this route
           # is not needed — data-writer.ts falls back to the GitHub Contents API.
-          #
-          # We delete the route file before building so @cloudflare/next-on-pages
-          # doesn't complain about nodejs routes. The local dev experience is
-          # unaffected (the file exists in the repo, just not in the CF build).
           echo "Removing nodejs-only route: src/app/data/[...path]/route.ts"
           rm -rf "src/app/data/[...path]"
-          # Verify removal
           if [ -d "src/app/data/[...path]" ]; then
             echo "::error::Failed to remove src/app/data/[...path]"
             exit 1
@@ -221,13 +138,13 @@ jobs:
         shell: bash
         run: |
           # @cloudflare/next-on-pages 输出到 .vercel/output/static
-          if [ ! -d ".vercel/output/static" ]; then
-            echo "::error::Build output .vercel/output/static not found — @cloudflare/next-on-pages failed."
+          if [ ! -d "dist" ] && [ ! -d ".vercel/output/static" ]; then
+            echo "::error::Build output not found — @cloudflare/next-on-pages failed."
             echo "=== cwd contents ==="
             ls -la | head -30
             exit 1
           fi
-          echo "✓ Build output verified: .vercel/output/static exists"
+          echo "✓ Build output verified"
           ls -la .vercel/output/static | head -20
 
       - name: Verify wrangler.toml has nodejs_compat
@@ -246,34 +163,43 @@ jobs:
 
       - name: Create Pages project if not exists
         shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+          # wrangler 4.x bug workaround: 显式传 --account-id 避免 "project does not exist"
+          if wrangler pages project list --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>/dev/null | grep -qF "$PROJECT_NAME"; then
             echo "Pages project '$PROJECT_NAME' already exists"
           else
-            wrangler pages project create "$PROJECT_NAME" --production-branch main
+            wrangler pages project create "$PROJECT_NAME" --production-branch main --account-id "$CLOUDFLARE_ACCOUNT_ID"
             echo "Created Pages project '$PROJECT_NAME'"
           fi
 
       - name: Configure secrets on Pages project
         shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           # 通过 wrangler pages secret put 设置运行时环境变量
-          # 这些 secret 在 Cloudflare Pages 边缘运行时可读取 (event.context.cloudflare.env)
-          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
+          # wrangler 4.x bug workaround: 必须显式传 --account-id
+          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
           if [ -n "$ADMIN_SECRET" ]; then
-            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
+            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID"
           fi
           echo "✓ Secrets configured (ENCRYPTION_KEY$( [ -n "$ADMIN_SECRET" ] && echo ' + ADMIN_SECRET' ))"
 
       - name: Deploy to Cloudflare Pages
         shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           # wrangler.toml 中的 pages_build_output_dir 不会自动生效,
           # 必须在命令行显式指定部署目录
+          # wrangler 4.x bug workaround: 显式传 --account-id
           wrangler pages deploy .vercel/output/static \
             --project-name="$PROJECT_NAME" \
             --branch=main \
-            --commit-dirty
+            --commit-dirty \
+            --account-id="$CLOUDFLARE_ACCOUNT_ID"
 
           # 通过 CF API 解析真实的 *.pages.dev 子域名
           PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \

@@ -43,7 +43,7 @@ on:
         description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
         required: false
         default: ''
-  push:
+  # push:
     # branches: [main]
 
     # Only trigger the deploy job when non-.data files change.
