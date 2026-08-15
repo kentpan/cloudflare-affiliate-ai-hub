@@ -120,11 +120,23 @@ jobs:
       - name: Create Pages project if not exists
         shell: bash
         run: |
+          # 判断项目是否存在 (用 grep -qF, 不依赖 jq)
           if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
-            echo "Pages project '$PROJECT_NAME' already exists"
+            echo "Pages project '$PROJECT_NAME' already exists, skipping creation"
           else
+            # 项目不存在 → 用 wrangler 新建
+            echo "Project '$PROJECT_NAME' does not exist, creating with wrangler..."
             wrangler pages project create "$PROJECT_NAME" --production-branch main
             echo "Created Pages project '$PROJECT_NAME'"
+
+            # 验证创建成功
+            if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+              echo "Verification passed: project '$PROJECT_NAME' now exists"
+            else
+              echo "::error::wrangler pages project create 执行完毕但项目仍未出现在列表中"
+              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限"
+              exit 1
+            fi
           fi
 
       - name: Configure secrets on Pages project
