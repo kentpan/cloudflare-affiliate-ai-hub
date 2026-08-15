@@ -101,6 +101,44 @@ jobs:
           echo "Resolved Account ID: $ACCOUNT_ID"
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
+      - name: Verify token can access Cloudflare Pages
+        shell: bash
+        run: |
+          # 提前验证 Token 是否有 Pages 权限,避免到后面才报错
+          echo "Checking if the configured credentials can access Cloudflare Pages..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
+            $([ -n "$CLOUDFLARE_API_TOKEN" ] && echo "-H \"Authorization: Bearer $CLOUDFLARE_API_TOKEN\"" || echo "-H \"X-Auth-Key: $CLOUDFLARE_API_KEY\" -H \"X-Auth-Email: $CLOUDFLARE_EMAIL\"") \
+            -H "Content-Type: application/json")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Cloudflare API returned HTTP $HTTP_CODE when listing Pages projects."
+            echo "::error::Response: $BODY"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "❌ AUTHENTICATION ERROR — Your credentials lack Pages permission."
+            echo ""
+            echo "Fix (choose one):"
+            echo ""
+            echo "  Option A (recommended): Edit your API Token at"
+            echo "    https://dash.cloudflare.com/profile/api-tokens"
+            echo "  and add these permissions:"
+            echo "    • Account → Cloudflare Pages → Edit"
+            echo "    • Account → Account Settings → Read"
+            echo "    • User → User Details → Read"
+            echo ""
+            echo "  Option B (easiest): Delete CLOUDFLARE_API_TOKEN secret,"
+            echo "  and set these two secrets instead:"
+            echo "    • CLOUDFLARE_API_KEY = your Global API Key"
+            echo "    • CLOUDFLARE_EMAIL = your Cloudflare account email"
+            echo "  (Global API Key has full permissions — get it from"
+            echo "   https://dash.cloudflare.com/profile/api-tokens → 'Global API Key')"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 1
+          fi
+          echo "✓ Credentials have Pages access."
+
       - name: Resolve Pages project name
         shell: bash
         run: |
