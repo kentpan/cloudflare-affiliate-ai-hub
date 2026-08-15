@@ -95,7 +95,14 @@ jobs:
             ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
           fi
           if [ -z "$ACCOUNT_ID" ]; then
-            echo "::error::Could not resolve Cloudflare Account ID. Set CLOUDFLARE_ACCOUNT_ID repo variable or ensure API token has 'User Details: Read' permission."
+            echo "::error::无法解析 Cloudflare Account ID。"
+            echo ""
+            echo "解决方法: 在 GitHub 仓库 Settings → Secrets and variables → Actions → Variables"
+            echo "中添加一个 Variable:"
+            echo "  名称: CLOUDFLARE_ACCOUNT_ID"
+            echo "  值:   5cca1d8ed2751f237b35257eddeae59d  (从本次错误日志中获取)"
+            echo ""
+            echo "或者在 Cloudflare 控制台右上角点你的账户名 → 查看 Account ID。"
             exit 1
           fi
           echo "Resolved Account ID: $ACCOUNT_ID"
@@ -106,38 +113,64 @@ jobs:
         run: |
           # 提前验证 Token 是否有 Pages 权限,避免到后面才报错
           echo "Checking if the configured credentials can access Cloudflare Pages..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
-            $([ -n "$CLOUDFLARE_API_TOKEN" ] && echo "-H \"Authorization: Bearer $CLOUDFLARE_API_TOKEN\"" || echo "-H \"X-Auth-Key: $CLOUDFLARE_API_KEY\" -H \"X-Auth-Email: $CLOUDFLARE_EMAIL\"") \
-            -H "Content-Type: application/json")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          # 用数组构建鉴权 header,避免引号嵌套问题
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            AUTH_ARGS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+            echo "Using CLOUDFLARE_API_TOKEN (Bearer auth)"
+          else
+            AUTH_ARGS=(-H "X-Auth-Key: $CLOUDFLARE_API_KEY" -H "X-Auth-Email: $CLOUDFLARE_EMAIL")
+            echo "Using CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL (Global Key auth)"
+          fi
+
+          # 调用 CF API 列出 Pages 项目
+          HTTP_CODE=$(curl -s -o /tmp/cf-check.json -w "%{http_code}" \
+            -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" \
+            "${AUTH_ARGS[@]}" \
+            -H "Content-Type: application/json" || echo "000")
+
+          BODY=$(cat /tmp/cf-check.json 2>/dev/null || echo "")
           echo "HTTP status: $HTTP_CODE"
+
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Cloudflare API returned HTTP $HTTP_CODE when listing Pages projects."
-            echo "::error::Response: $BODY"
+            echo "::error::Cloudflare API 返回 HTTP $HTTP_CODE (列出 Pages 项目时)"
+            echo "::error::响应内容: $BODY"
             echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "❌ AUTHENTICATION ERROR — Your credentials lack Pages permission."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "❌ 鉴权失败 — 你的凭据缺少 Cloudflare Pages 权限"
             echo ""
-            echo "Fix (choose one):"
+            echo "═══ 方案 A: 用 Global API Key (最简单,不用管权限) ═══"
             echo ""
-            echo "  Option A (recommended): Edit your API Token at"
+            echo "  1. GitHub Secrets 中删除 CLOUDFLARE_API_TOKEN"
+            echo "  2. 添加两个 Secret:"
+            echo "     • CLOUDFLARE_API_KEY = Global API Key"
+            echo "     • CLOUDFLARE_EMAIL   = ayue222@126.com"
+            echo ""
+            echo "  获取 Global API Key:"
             echo "    https://dash.cloudflare.com/profile/api-tokens"
-            echo "  and add these permissions:"
-            echo "    • Account → Cloudflare Pages → Edit"
-            echo "    • Account → Account Settings → Read"
-            echo "    • User → User Details → Read"
+            echo "    → 页面下方 'Global API Key' → 点 'View' → 输入密码 → 复制"
             echo ""
-            echo "  Option B (easiest): Delete CLOUDFLARE_API_TOKEN secret,"
-            echo "  and set these two secrets instead:"
-            echo "    • CLOUDFLARE_API_KEY = your Global API Key"
-            echo "    • CLOUDFLARE_EMAIL = your Cloudflare account email"
-            echo "  (Global API Key has full permissions — get it from"
-            echo "   https://dash.cloudflare.com/profile/api-tokens → 'Global API Key')"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "═══ 方案 B: 编辑现有 API Token 添加权限 ═══"
+            echo ""
+            echo "  1. 打开 https://dash.cloudflare.com/profile/api-tokens"
+            echo "  2. 找到你正在用的 Token,点右边的 '编辑' (Edit)"
+            echo "  3. 在 '权限' (Permissions) 区域,点 '添加更多' (Add more)"
+            echo "  4. 添加这一条权限 (三个下拉框依次选):"
+            echo "     • 第1个下拉框选: 账户 (Account)"
+            echo "     • 第2个下拉框选: Cloudflare Pages"
+            echo "     • 第3个下拉框选: 编辑 (Edit)"
+            echo ""
+            echo "  注: 只需要这一条 'Cloudflare Pages → 编辑' 权限就够了。"
+            echo "      如果还需要 D1/KV,再加对应的权限。"
+            echo "      'Account Settings' 和 'User Details' 不需要 (已通过"
+            echo "      CLOUDFLARE_ACCOUNT_ID 变量绕过)。"
+            echo ""
+            echo "  5. 点 '继续以显示摘要' → '更新令牌' (Update Token)"
+            echo "  6. 重新触发 GitHub Actions"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
           fi
-          echo "✓ Credentials have Pages access."
+          echo "✓ 凭据有 Pages 访问权限。"
 
       - name: Resolve Pages project name
         shell: bash
