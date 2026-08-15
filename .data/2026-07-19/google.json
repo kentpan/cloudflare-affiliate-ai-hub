@@ -1,0 +1,467 @@
+[
+  {
+    "id": "gg-1784431697674-24-oix5zy",
+    "platform": "google",
+    "title": "UI/UX设计师就业班 Figma+作品集",
+    "price": 223.72,
+    "originalPrice": 281.89,
+    "commissionRate": 6.53,
+    "salesVolume": 4105,
+    "rating": 4.86,
+    "reviewCount": 6000,
+    "category": "在线课程",
+    "imageUrl": "https://picsum.photos/seed/gg24designcourse/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 67.53,
+    "expectedRevenue": 14.61,
+    "aiCopy": "爆款推荐｜在线课程好物，佣金6.53%，预期收益$14.61",
+    "aiTags": [
+      "google",
+      "在线课程",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+4105销量，转化预期佳",
+    "directionId": "online-courses"
+  },
+  {
+    "id": "gg-1784431697674-1-ccb8fp",
+    "platform": "google",
+    "title": "京东PLUS会员年卡 京豆+免邮+专属价",
+    "price": 30.21,
+    "originalPrice": 36.25,
+    "commissionRate": 3.76,
+    "salesVolume": 26841,
+    "rating": 4.86,
+    "reviewCount": 49004,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg1membershipcard/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 63.7,
+    "expectedRevenue": 1.14,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金3.76%，预期收益$1.14",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+26841销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1784431697674-13-gqqabc",
+    "platform": "google",
+    "title": "UI/UX设计师就业班 Figma+作品集",
+    "price": 209.28,
+    "originalPrice": 230.21,
+    "commissionRate": 3.42,
+    "salesVolume": 2986,
+    "rating": 4.8,
+    "reviewCount": 7431,
+    "category": "在线课程",
+    "imageUrl": "https://picsum.photos/seed/gg13designcourse/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 62.74,
+    "expectedRevenue": 7.16,
+    "aiCopy": "爆款推荐｜在线课程好物，佣金3.42%，预期收益$7.16",
+    "aiTags": [
+      "google",
+      "在线课程",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2986销量，转化预期佳",
+    "directionId": "online-courses"
+  },
+  {
+    "id": "gg-1784431697674-17-yqny4o",
+    "platform": "google",
+    "title": "淘宝88VIP年卡 优酷+虾米+饿了么",
+    "price": 17.23,
+    "originalPrice": 19.64,
+    "commissionRate": 5.34,
+    "salesVolume": 26646,
+    "rating": 4.76,
+    "reviewCount": 57530,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg17vipmembership/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 62.6,
+    "expectedRevenue": 0.92,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金5.34%，预期收益$0.92",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+26646销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1784431697674-3-7o2ze5",
+    "platform": "google",
+    "title": "PPT模板大全10000套 商务汇报教育通用",
+    "price": 13.32,
+    "originalPrice": 14.79,
+    "commissionRate": 5.25,
+    "salesVolume": 19085,
+    "rating": 4.75,
+    "reviewCount": 16893,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg3ppttemplate/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.76,
+    "expectedRevenue": 0.7,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金5.25%，预期收益$0.7",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+19085销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1784431697674-0-guilwz",
+    "platform": "google",
+    "title": "淘宝88VIP年卡 优酷+虾米+饿了么",
+    "price": 17.11,
+    "originalPrice": 21.9,
+    "commissionRate": 3.7,
+    "salesVolume": 18703,
+    "rating": 4.73,
+    "reviewCount": 68568,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg0vipmembership/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.37,
+    "expectedRevenue": 0.63,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金3.7%，预期收益$0.63",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+18703销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1784431697674-16-9edy8u",
+    "platform": "google",
+    "title": "Figma专业版 年订阅 UI设计协作",
+    "price": 100.5,
+    "originalPrice": 119.6,
+    "commissionRate": 3.68,
+    "salesVolume": 2953,
+    "rating": 4.87,
+    "reviewCount": 1903,
+    "category": "SaaS服务",
+    "imageUrl": "https://picsum.photos/seed/gg16uidesigntool/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.18,
+    "expectedRevenue": 3.7,
+    "aiCopy": "爆款推荐｜SaaS服务好物，佣金3.68%，预期收益$3.7",
+    "aiTags": [
+      "google",
+      "SaaS服务",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2953销量，转化预期佳",
+    "directionId": "saas-services"
+  },
+  {
+    "id": "gg-1784431697674-9-pwuhpo",
+    "platform": "google",
+    "title": "Figma专业版 年订阅 UI设计协作",
+    "price": 96,
+    "originalPrice": 116.16,
+    "commissionRate": 4.39,
+    "salesVolume": 2152,
+    "rating": 4.97,
+    "reviewCount": 2226,
+    "category": "SaaS服务",
+    "imageUrl": "https://picsum.photos/seed/gg9uidesigntool/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.12,
+    "expectedRevenue": 4.21,
+    "aiCopy": "爆款推荐｜SaaS服务好物，佣金4.39%，预期收益$4.21",
+    "aiTags": [
+      "google",
+      "SaaS服务",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2152销量，转化预期佳",
+    "directionId": "saas-services"
+  },
+  {
+    "id": "gg-1784431697674-7-mouy67",
+    "platform": "google",
+    "title": "淘宝88VIP年卡 优酷+虾米+饿了么",
+    "price": 14.06,
+    "originalPrice": 16.73,
+    "commissionRate": 3.06,
+    "salesVolume": 20139,
+    "rating": 4.75,
+    "reviewCount": 28797,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg7vipmembership/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.05,
+    "expectedRevenue": 0.43,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金3.06%，预期收益$0.43",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+20139销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1784431697674-15-b3pxgk",
+    "platform": "google",
+    "title": "PPT模板大全10000套 商务汇报教育通用",
+    "price": 10.54,
+    "originalPrice": 11.7,
+    "commissionRate": 5.69,
+    "salesVolume": 15672,
+    "rating": 4.8,
+    "reviewCount": 12970,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg15ppttemplate/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.01,
+    "expectedRevenue": 0.6,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金5.69%，预期收益$0.6",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+15672销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1784431697674-11-n5yfaf",
+    "platform": "google",
+    "title": "Figma专业版 年订阅 UI设计协作",
+    "price": 90,
+    "originalPrice": 101.7,
+    "commissionRate": 6.14,
+    "salesVolume": 1582,
+    "rating": 4.85,
+    "reviewCount": 1239,
+    "category": "SaaS服务",
+    "imageUrl": "https://picsum.photos/seed/gg11uidesigntool/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 59.62,
+    "expectedRevenue": 5.53,
+    "aiCopy": "爆款推荐｜SaaS服务好物，佣金6.14%，预期收益$5.53",
+    "aiTags": [
+      "google",
+      "SaaS服务",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+1582销量，转化预期佳",
+    "directionId": "saas-services"
+  },
+  {
+    "id": "gg-1784431697674-12-62hytg",
+    "platform": "google",
+    "title": "淘宝88VIP年卡 优酷+虾米+饿了么",
+    "price": 14.42,
+    "originalPrice": 16.73,
+    "commissionRate": 3.65,
+    "salesVolume": 13288,
+    "rating": 4.81,
+    "reviewCount": 64114,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg12vipmembership/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 59.25,
+    "expectedRevenue": 0.53,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金3.65%，预期收益$0.53",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+13288销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1784431697674-21-ikexuf",
+    "platform": "google",
+    "title": "4K视频素材包200GB 短视频剪辑商用授权",
+    "price": 61.88,
+    "originalPrice": 79.83,
+    "commissionRate": 4.07,
+    "salesVolume": 2614,
+    "rating": 4.86,
+    "reviewCount": 4422,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg21videofootage/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 58.2,
+    "expectedRevenue": 2.52,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金4.07%，预期收益$2.52",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2614销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1784431697674-10-1yricd",
+    "platform": "google",
+    "title": "商用字体合集500款 设计师必备版权无忧",
+    "price": 30.03,
+    "originalPrice": 37.24,
+    "commissionRate": 3.24,
+    "salesVolume": 6338,
+    "rating": 4.75,
+    "reviewCount": 4354,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg10fontdesign/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.7,
+    "expectedRevenue": 0.97,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金3.24%，预期收益$0.97",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+6338销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1784431697674-23-fz91zp",
+    "platform": "google",
+    "title": "蓝山挂耳咖啡 10g×20片 新鲜烘焙",
+    "price": 12.46,
+    "originalPrice": 15.2,
+    "commissionRate": 3.05,
+    "salesVolume": 9298,
+    "rating": 4.81,
+    "reviewCount": 4431,
+    "category": "食品保健",
+    "imageUrl": "https://picsum.photos/seed/gg23dripcoffee/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.48,
+    "expectedRevenue": 0.38,
+    "aiCopy": "爆款推荐｜食品保健好物，佣金3.05%，预期收益$0.38",
+    "aiTags": [
+      "google",
+      "食品保健",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+9298销量，转化预期佳",
+    "directionId": "food-health"
+  }
+]

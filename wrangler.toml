@@ -1,0 +1,28 @@
+# Cloudflare Pages configuration for the Next.js (affiliate-ai-hub) project.
+#
+# Built with `@cloudflare/next-on-pages` — outputs to .vercel/output/static.
+# Deploy via: wrangler pages deploy .vercel/output/static --project-name=affiliate-ai-hub
+#
+# Required GitHub Secrets (set in repo Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  — Cloudflare API token (Pages:Edit permission)
+#                          OR CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL (legacy)
+#   ENCRYPTION_KEY        — 32-char hex used for credential encryption
+#   ADMIN_SECRET          — Admin panel login password (optional, empty = open mode)
+#
+# Runtime secrets (configured on the Pages project via `wrangler pages secret put`):
+#   - ENCRYPTION_KEY (read at runtime via event.context.cloudflare.env)
+#   - ADMIN_SECRET
+
+name = "affiliate-ai-hub"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = ".vercel/output/static"
+compatibility_flags = ["nodejs_compat"]
+
+# Optional KV namespace binding (for caching) — uncomment and set the ID to enable.
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "YOUR_KV_NAMESPACE_ID"
+
+# Environment variables (non-secret) — set secrets via wrangler pages secret put.
+[vars]
+# ENCRYPTION_KEY, ADMIN_SECRET should be set as secrets, NOT in this file.

@@ -1,0 +1,29 @@
+{
+  "updatedAt": "2026-08-15T01:36:20.100Z",
+  "dates": [
+    "2026-08-15"
+  ],
+  "platforms": [
+    "amazon",
+    "taobao",
+    "jd",
+    "google",
+    "pdd",
+    "douyin",
+    "kuaishou",
+    "xhs"
+  ],
+  "totals": {
+    "2026-08-15": {
+      "total": 153,
+      "amazon": 18,
+      "taobao": 24,
+      "jd": 21,
+      "google": 15,
+      "pdd": 21,
+      "douyin": 21,
+      "kuaishou": 18,
+      "xhs": 15
+    }
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2026-08-15T01:36:20.100Z",
+    "date": "2026-08-15",
+    "platforms": {
+      "amazon": {
+        "raw": 30,
+        "picked": 18
+      },
+      "taobao": {
+        "raw": 40,
+        "picked": 24
+      },
+      "jd": {
+        "raw": 35,
+        "picked": 21
+      },
+      "google": {
+        "raw": 25,
+        "picked": 15
+      },
+      "pdd": {
+        "raw": 35,
+        "picked": 21
+      },
+      "douyin": {
+        "raw": 35,
+        "picked": 21
+      },
+      "kuaishou": {
+        "raw": 30,
+        "picked": 18
+      },
+      "xhs": {
+        "raw": 25,
+        "picked": 15
+      }
+    },
+    "total": 153,
+    "durationMs": 73,
+    "source": "scheduled",
+    "llmUsed": true
+  }
+]

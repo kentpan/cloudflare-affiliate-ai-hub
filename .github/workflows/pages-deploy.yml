@@ -1,0 +1,207 @@
+name: Deploy to Cloudflare Pages (Auto on Push)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Next.js → Cloudflare Pages 自动部署工作流
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# 触发条件: 推送到 main / master 分支 (排除 .data/*.json 的提交) 或手动触发
+#
+# 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置:
+#   1. CLOUDFLARE_API_TOKEN  (推荐) 或 CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL
+#      - API Token 需要 Cloudflare Pages:Edit 权限
+#   2. ENCRYPTION_KEY        — 凭证加密密钥 (32 位 hex)
+#   3. ADMIN_SECRET          — 管理界面登录密码 (留空则开放模式)
+#
+# 可选 GitHub Variables (Settings → Secrets and variables → Actions → Variables):
+#   CLOUDFLARE_PAGES_PROJECT — Pages 项目名 (默认 affiliate-ai-hub)
+#   CLOUDFLARE_ACCOUNT_ID    — Cloudflare 账户 ID (可选,可从 API Token 自动解析)
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '.data/**'
+      - '**/*.md'
+      - 'public/affiliate-ai-hub-v*.zip'
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Pages 项目名称 (留空则使用 CLOUDFLARE_PAGES_PROJECT 变量或默认 affiliate-ai-hub)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || '' }}
+    env:
+      # 优先使用细粒度 API Token;fallback 到 Global API Key + Email
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+      CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+      ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install wrangler
+        shell: bash
+        run: npm install -g wrangler
+
+      - name: Verify required secrets
+        shell: bash
+        run: |
+          # 校验:必须配置 CLOUDFLARE_API_TOKEN 或 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL) 之一
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            if [ -z "$CLOUDFLARE_API_KEY" ] || [ -z "$CLOUDFLARE_EMAIL" ]; then
+              echo "::error::Missing Cloudflare credentials. Configure CLOUDFLARE_API_TOKEN (recommended) OR CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL as GitHub Secrets."
+              exit 1
+            fi
+            echo "⚠ Using Global API Key + Email (legacy auth). Recommend switching to API Token."
+          else
+            echo "✓ Using CLOUDFLARE_API_TOKEN (recommended)."
+          fi
+          # ENCRYPTION_KEY 强制要求
+          if [ -z "$ENCRYPTION_KEY" ]; then
+            echo "::error::Missing ENCRYPTION_KEY secret (32-char hex used for credential encryption)."
+            exit 1
+          fi
+          echo "✓ Required secrets present."
+
+      - name: Resolve Cloudflare Account ID
+        shell: bash
+        run: |
+          # 优先使用仓库 Variable;否则从 wrangler whoami 输出解析
+          ACCOUNT_ID="${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+          if [ -z "$ACCOUNT_ID" ]; then
+            ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
+          fi
+          if [ -z "$ACCOUNT_ID" ]; then
+            echo "::error::Could not resolve Cloudflare Account ID. Set CLOUDFLARE_ACCOUNT_ID repo variable or ensure API token has 'User Details: Read' permission."
+            exit 1
+          fi
+          echo "Resolved Account ID: $ACCOUNT_ID"
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
+      - name: Resolve Pages project name
+        shell: bash
+        run: |
+          # 优先级: workflow_dispatch 输入 > 仓库 Variable > 默认值
+          INPUT_NAME="${{ inputs.project_name }}"
+          VAR_NAME="${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
+          PROJECT_NAME="${INPUT_NAME:-${VAR_NAME:-affiliate-ai-hub}}"
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+          echo "Resolved Pages project: $PROJECT_NAME"
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci --no-audit --no-fund
+
+      - name: Build Next.js
+        shell: bash
+        run: npm run build
+        env:
+          NEXT_PUBLIC_GIT_REPO: ${{ github.repository }}
+          NEXT_PUBLIC_DATA_URL: https://raw.githubusercontent.com/${{ github.repository }}/main
+
+      - name: Build for Cloudflare Pages
+        shell: bash
+        run: npx @cloudflare/next-on-pages@1
+
+      - name: Verify build output
+        shell: bash
+        run: |
+          # @cloudflare/next-on-pages 输出到 .vercel/output/static
+          if [ ! -d ".vercel/output/static" ]; then
+            echo "::error::Build output .vercel/output/static not found — @cloudflare/next-on-pages failed."
+            echo "=== cwd contents ==="
+            ls -la | head -30
+            exit 1
+          fi
+          echo "✓ Build output verified: .vercel/output/static exists"
+          ls -la .vercel/output/static | head -20
+
+      - name: Verify wrangler.toml has nodejs_compat
+        shell: bash
+        run: |
+          if [ ! -f wrangler.toml ]; then
+            echo "❌ ERROR: wrangler.toml not found!"
+            exit 1
+          fi
+          if ! grep -q "nodejs_compat" wrangler.toml; then
+            echo "❌ ERROR: nodejs_compat not found in wrangler.toml!"
+            exit 1
+          fi
+          echo "✓ wrangler.toml verified:"
+          grep -E "compatibility_date|compatibility_flags|pages_build_output_dir" wrangler.toml
+
+      - name: Create Pages project if not exists
+        shell: bash
+        run: |
+          if wrangler pages project list 2>/dev/null | grep -qF "$PROJECT_NAME"; then
+            echo "Pages project '$PROJECT_NAME' already exists"
+          else
+            wrangler pages project create "$PROJECT_NAME" --production-branch main
+            echo "Created Pages project '$PROJECT_NAME'"
+          fi
+
+      - name: Configure secrets on Pages project
+        shell: bash
+        run: |
+          # 通过 wrangler pages secret put 设置运行时环境变量
+          # 这些 secret 在 Cloudflare Pages 边缘运行时可读取 (event.context.cloudflare.env)
+          printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
+          if [ -n "$ADMIN_SECRET" ]; then
+            printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
+          fi
+          echo "✓ Secrets configured (ENCRYPTION_KEY$( [ -n "$ADMIN_SECRET" ] && echo ' + ADMIN_SECRET' ))"
+
+      - name: Deploy to Cloudflare Pages
+        shell: bash
+        run: |
+          # wrangler.toml 中的 pages_build_output_dir 不会自动生效,
+          # 必须在命令行显式指定部署目录
+          wrangler pages deploy .vercel/output/static \
+            --project-name="$PROJECT_NAME" \
+            --branch=main \
+            --commit-dirty
+
+          # 通过 CF API 解析真实的 *.pages.dev 子域名
+          PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          RAW_SUBDOMAIN=$(echo "$PROJECT_DETAILS" | jq -r '.result.subdomain // empty' | tr -d '\r\n')
+          DEPLOY_URL="https://${RAW_SUBDOMAIN:-$PROJECT_NAME}.pages.dev"
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+          echo "::notice::Deployment URL: $DEPLOY_URL"
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Cloudflare Pages 自动部署 ${{ job.status == 'success' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 配置项 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Pages 项目 | $PROJECT_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发分支 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发方式 | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 部署目录 | .vercel/output/static |" >> $GITHUB_STEP_SUMMARY
+          echo "| 构建工具 | @cloudflare/next-on-pages |" >> $GITHUB_STEP_SUMMARY
+          echo "| 访问地址 | ${{ env.DEPLOY_URL || '(部署失败)' }} |" >> $GITHUB_STEP_SUMMARY
