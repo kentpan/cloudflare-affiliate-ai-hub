@@ -53,3 +53,6 @@ prisma/*.db-journal
 
 # @cloudflare/next-on-pages output
 .vercel/
+
+# 构建时从 .data/ 复制生成的静态数据(随站点部署,不重复入库)
+public/data/

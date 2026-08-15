@@ -29,6 +29,10 @@ on:
   schedule:
     # UTC 00:00 = Beijing 08:00 — daily AI selection run
     - cron: '0 0 * * *'
+  # 外部触发:AI 选品按钮通过 GitHub API 发送 repository_dispatch 触发本工作流。
+  # POST /repos/{owner}/{repo}/dispatches  body: {"event_type":"run-picker","client_payload":{...}}
+  repository_dispatch:
+    types: [run-picker]
   workflow_dispatch:
     inputs:
       date:
@@ -56,7 +60,7 @@ on:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 concurrency:
   group: affiliate-${{ github.event_name }}-${{ github.ref }}
@@ -64,7 +68,7 @@ concurrency:
 
 jobs:
   pick:
-    # Only run the picker on schedule or manual dispatch — NOT on push.
+    # Only run the picker on schedule, manual dispatch, or external (repository_dispatch) trigger — NOT on push.
     # Push events are handled by the `deploy` job below.
     if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
@@ -102,6 +106,10 @@ jobs:
         working-directory: ./scripts
         id: picker
         env:
+          # repository_dispatch 时参数在 client_payload;workflow_dispatch/schedule 时在 inputs
+          DISPATCH_DATE: ${{ github.event.client_payload.date }}
+          DISPATCH_LLM_KEY: ${{ github.event.client_payload.llm_apikey }}
+          DISPATCH_USE_LLM: ${{ github.event.client_payload.use_llm }}
           LLMAI_APIKEY: ${{ github.event.inputs.llm_apikey || secrets.LLMAI_APIKEY }}
           LLMAI_BASE_URL: ${{ secrets.LLMAI_BASE_URL }}
           LLMAI_MODEL: ${{ secrets.LLMAI_MODEL }}
@@ -133,9 +141,9 @@ jobs:
           XHS_APP_SECRET: ${{ secrets.XHS_APP_SECRET }}
           RECEIVE_URL: ${{ secrets.RECEIVE_URL }}
           RECEIVE_TOKEN: ${{ secrets.RECEIVE_TOKEN }}
-          PICKER_DATE: ${{ github.event.inputs.date }}
-          MANUAL_LLM_KEY: ${{ github.event.inputs.llm_apikey }}
-          USE_LLM_INPUT: ${{ github.event.inputs.use_llm }}
+          PICKER_DATE: ${{ github.event.inputs.date || github.event.client_payload.date }}
+          MANUAL_LLM_KEY: ${{ github.event.inputs.llm_apikey || github.event.client_payload.llm_apikey }}
+          USE_LLM_INPUT: ${{ github.event.inputs.use_llm || github.event.client_payload.use_llm }}
         run: |
           set -euo pipefail
           echo "=== Daily Affiliate AI Picker ==="
@@ -228,6 +236,26 @@ jobs:
           git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items) [skip deploy]" || echo "no changes to commit"
           git push || echo "push failed (possibly no changes)"
 
+      # 触发 pages-deploy.yml 重新部署到 Cloudflare Pages。
+      # 需要 repo secret GH_TOKEN (GitHub PAT, workflow scope 权限)。
+      # 若未配置 GH_TOKEN,则依赖 push 事件触发 pages-deploy.yml (其 push 触发器)。
+      - name: Trigger Cloudflare Pages redeploy
+        if: ${{ always() && steps.picker.outputs.date != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GH_TOKEN not configured — push 事件会自动触发 pages-deploy.yml"
+            exit 0
+          fi
+          echo "Triggering pages-deploy.yml via workflow_dispatch..."
+          curl -sS -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages-deploy.yml/dispatches \
+            -d '{"ref":"main"}'
+          echo "Dispatched pages-deploy.yml"
+
       - name: Summary
         run: |
           echo "### Daily Affiliate AI Picker Summary" >> "$GITHUB_STEP_SUMMARY"
@@ -236,7 +264,7 @@ jobs:
           echo "- **Total picks**: ${{ steps.picker.outputs.total }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Artifact**: affiliate-data-${{ steps.picker.outputs.date }} (90-day retention)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **RECEIVE_URL**: pushed if configured" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Deploy**: skipped (.data/** commits excluded by paths-ignore)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Deploy**: pages-deploy.yml re-triggered (via GH_TOKEN or push)" >> "$GITHUB_STEP_SUMMARY"
 
   # ─────────────────────────────────────────────────────────────────────────
   # Deploy job — runs ONLY on push events where non-.data files changed.

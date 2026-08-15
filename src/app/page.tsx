@@ -65,6 +65,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { TrendingProductCard } from "@/components/trending/trending-product-card";
 import { CustomizationPanel } from "@/components/trending/customization-panel";
@@ -186,6 +194,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
   const [detail, setDetail] = useState<PickedProduct | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
   const [trend, setTrend] = useState<TrendData | null>(null);
@@ -300,13 +309,15 @@ export default function DashboardPage() {
 
   const handleRegenerate = useCallback(async () => {
     setRegenerating(true);
-    const t = toast.loading("正在调用 AI 重新生成今日选品…");
+    const t = toast.loading("正在触发 GitHub Actions 执行 AI 选品…");
     try {
       const res = await generate({ date: selectedDate || undefined, useLlm: true });
       if (res.ok) {
         toast.success(
-          `生成完成 · ${res.total ?? 0} 件 · ${((res.durationMs ?? 0) / 1000).toFixed(1)}s`,
-          { id: t },
+          res.triggered
+            ? "已触发 AI 选品任务,执行完成后会自动重新部署,请稍后刷新查看结果"
+            : `生成完成 · ${res.total ?? 0} 件 · ${((res.durationMs ?? 0) / 1000).toFixed(1)}s`,
+          { id: t, duration: 6000 },
         );
         await loadDateData(selectedDate);
         const idx = await getIndex();
@@ -626,7 +637,7 @@ export default function DashboardPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button size="sm" onClick={handleRegenerate} disabled={regenerating} className="gap-1.5">
+            <Button size="sm" onClick={() => setConfirmRegenerate(true)} disabled={regenerating} className="gap-1.5">
               {regenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -1350,6 +1361,43 @@ export default function DashboardPage() {
       />
       <CredentialsPanel open={credentialsOpen} onOpenChange={setCredentialsOpen} />
       <Toaster richColors position="top-right" />
+
+      {/* AI 选品确认对话框 */}
+      <Dialog open={confirmRegenerate} onOpenChange={setConfirmRegenerate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-cyan-600" />
+              确认执行 AI 选品?
+            </DialogTitle>
+            <DialogDescription>
+              <p>
+                点击后将在 GitHub Actions 中执行 <code>daily-picker.yml</code> 脚本重新选品,
+                完成后会自动触发 <code>pages-deploy.yml</code> 重新部署到 Cloudflare Pages。
+              </p>
+              <p className="mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                整个过程耗时较长(通常约 3-10 分钟),期间页面数据不会立即更新,请慎重决定是否执行。
+              </p>
+              <p className="mt-2 text-muted-foreground">
+                系统默认每天 08:00(北京时间)自动执行选品并部署,无需手动操作。
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRegenerate(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmRegenerate(false);
+                handleRegenerate();
+              }}
+            >
+              确认执行
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

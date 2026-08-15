@@ -46,6 +46,8 @@ export interface GenerateResponse {
   error?: string;
   seeded?: boolean;
   dates?: string[];
+  triggered?: boolean;
+  message?: string;
 }
 
 export async function generate(opts: {

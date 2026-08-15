@@ -10,6 +10,13 @@ name: Deploy to Cloudflare Pages (Auto on Push)
 #
 # 可选环境变量（workflow_dispatch 手动触发时可输入）：
 #   PROJECT_NAME   — Pages 项目名（默认 affiliate-ai-hub）
+#
+# 可选 secret（提升体验，非必填）：
+#   GH_TOKEN  — GitHub PAT（需 repo + actions/workflow 权限）。
+#               配置后:① 写入 Pages 作为 GITHUB_TOKEN,提升数据接口 GitHub API 限流;
+#                       ② AI 选品按钮可通过它触发 daily-picker.yml。
+# 部署时 wrangler 会把以下运行变量写入 Pages 项目(凭证管理面板需要):
+#   CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_PAGES_PROJECT
 
 on:
   push:
@@ -41,6 +48,9 @@ jobs:
       CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+      # 可选:GitHub PAT(需 repo/actions 权限)。若配置,会写入 Pages 作为 GITHUB_TOKEN,
+      # 用于提升 GitHub API 限流 + AI选品按钮触发 daily-picker 工作流。
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - uses: actions/checkout@v5
 
@@ -87,6 +97,18 @@ jobs:
           echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
           echo "Resolved: project=$PROJECT_NAME"
 
+      - name: Copy .data to public/data (deploy data with site)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/data
+          # 用 rsync/cp 把 .data 全部数据复制到 public/data,随站点部署。
+          # 这样 /data/* 路径直接命中静态文件,不依赖 GitHub API,无限流。
+          cp -r .data/. public/data/
+          echo "✓ Copied $(find public/data -type f | wc -l) data files to public/data/"
+          echo "=== sample ==="
+          ls public/data/ | head -5
+
       - name: Install dependencies
         shell: bash
         run: npm install
@@ -101,6 +123,31 @@ jobs:
       - name: Build for Cloudflare Pages
         shell: bash
         run: npx @cloudflare/next-on-pages@1
+
+      - name: Route /data/* to static files (bypass worker)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROUTES=".vercel/output/static/_routes.json"
+          if [ -f "$ROUTES" ]; then
+            # 把 /data/* 加入 exclude,使其绕过 worker 直接命中静态文件(更快、无 GitHub API 依赖)。
+            # 使用 python3 或 node 修改 JSON,避免 jq 依赖。
+            if command -v node >/dev/null 2>&1; then
+              node -e '
+                const fs = require("fs");
+                const p = ".vercel/output/static/_routes.json";
+                const data = JSON.parse(fs.readFileSync(p, "utf8"));
+                if (!data.exclude.includes("/data/*")) data.exclude.push("/data/*");
+                fs.writeFileSync(p, JSON.stringify(data));
+                console.log("routes.json exclude:", data.exclude.join(","));
+              '
+            else
+              echo "::error::node not found — cannot route /data/* to static"
+              exit 1
+            fi
+          else
+            echo "::warning::_routes.json not found — cannot route /data/* to static"
+          fi
 
       - name: Verify build output
         shell: bash
@@ -149,17 +196,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 诊断:打印当前项目列表,确认 wrangler 能看到目标项目
-          echo "=== Current Pages projects (as seen by wrangler) ==="
-          wrangler pages project list 2>&1 || echo "wrangler pages project list failed"
-          echo ""
           echo "=== Target project: $PROJECT_NAME ==="
-          echo ""
+          wrangler pages project list 2>&1 | grep -qF "$PROJECT_NAME" || {
+            echo "::error::Pages project '$PROJECT_NAME' not found — run 'Create Pages project' step first."
+            exit 1
+          }
 
+          # ── 业务 secrets (加密密钥 + 管理密码) ──
           printf '%s' "$ENCRYPTION_KEY" | wrangler pages secret put ENCRYPTION_KEY --project-name "$PROJECT_NAME"
           if [ -n "$ADMIN_SECRET" ]; then
             printf '%s' "$ADMIN_SECRET" | wrangler pages secret put ADMIN_SECRET --project-name "$PROJECT_NAME"
           fi
+
+          # ── Cloudflare 运行变量 (凭证管理面板需要) ──
+          # 写入后,凭证面板检测到 CLOUDFLARE_* 齐全即可通过 CF API 写入业务凭证。
+          # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_PAGES_PROJECT
+          # 均为运行时环境变量,允许 Web 端调用 Cloudflare REST API。
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is empty — cannot write runtime env."
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty — cannot write runtime env."
+            exit 1
+          fi
+
+          # 用 wrangler pages secret put 写入 (Pages 将 secret 作为运行时 env 注入)
+          printf '%s' "$CLOUDFLARE_API_TOKEN" | wrangler pages secret put CLOUDFLARE_API_TOKEN --project-name "$PROJECT_NAME"
+          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | wrangler pages secret put CLOUDFLARE_ACCOUNT_ID --project-name "$PROJECT_NAME"
+          printf '%s' "$PROJECT_NAME" | wrangler pages secret put CLOUDFLARE_PAGES_PROJECT --project-name "$PROJECT_NAME"
+
+          # GITHUB_TOKEN (可选):若仓库配置了 GH_TOKEN,写入以提升 GitHub API 限流
+          if [ -n "$GH_TOKEN" ]; then
+            printf '%s' "$GH_TOKEN" | wrangler pages secret put GITHUB_TOKEN --project-name "$PROJECT_NAME"
+            echo "✓ GITHUB_TOKEN written (from GH_TOKEN secret)"
+          fi
+
           echo "✓ Secrets configured"
 
       - name: Deploy to Cloudflare Pages
