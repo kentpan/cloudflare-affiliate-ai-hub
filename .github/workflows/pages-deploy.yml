@@ -104,6 +104,7 @@ jobs:
               OUTPUT_DIR: c.outputDir || '.vercel/output/static',
               DATA_SRC: (c.dataToPublic && c.dataToPublic.source) || '',
               DATA_TGT: (c.dataToPublic && c.dataToPublic.target) || '',
+              REBUILD_INDEX_SCRIPT: c.rebuildIndexScript || '',
               STATIC_EXCLUDE: JSON.stringify(c.staticExclude || []),
               SECRETS_MAP: JSON.stringify(c.secrets || {}),
               RUNTIME_SECRETS: JSON.stringify(c.runtimeSecrets || []),
@@ -138,6 +139,17 @@ jobs:
           fi
           echo "Resolved Account ID: $ACCOUNT_ID"
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
+      # ── 重建 index.json(可选) ──
+      # 扫描实际数据目录重建完整 dates 列表, 修复上升最快/新上榜/趋势对比因
+      # index.json 缺日期而为空的问题。
+      - name: Rebuild index.json from data dirs
+        if: env.REBUILD_INDEX_SCRIPT != '' && env.DATA_SRC != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$REBUILD_INDEX_SCRIPT" "$DATA_SRC"
+          echo "✓ index.json rebuilt (dates: $(node -e "console.log(require('./$DATA_SRC/index.json').dates.length)") )"
 
       # ── 数据目录 → public/(可选) ──
       # 把本地数据(如 .data)复制到 public/, 随站点部署为静态文件。

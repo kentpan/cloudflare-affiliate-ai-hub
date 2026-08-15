@@ -716,12 +716,19 @@ export default function DashboardPage() {
               tone="cyan"
               hint="展开趋势对比"
               onClick={() => {
+                // 需要至少 2 个不同日期才能对比。
+                if (dates.length < 2) {
+                  toast.info("暂无足够的历史数据(至少需要 2 个日期)进行趋势对比");
+                  return;
+                }
                 setCompareOpen(true);
-                const from = dates[dates.length - 1] ?? selectedDate;
-                const to = selectedDate;
-                setCompareFrom(from);
-                setCompareTo(to);
-                handleCompare(from, to);
+                const newest = dates[0] ?? selectedDate;    // dates 是 新→旧
+                const oldest = dates[dates.length - 1] ?? selectedDate;
+                const f = newest !== oldest ? oldest : (dates[1] ?? oldest);
+                const t = newest;
+                setCompareFrom(f);
+                setCompareTo(t);
+                handleCompare(f, t);
               }}
             />
             <StatCard

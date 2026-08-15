@@ -1,21 +1,23 @@
 // Unified data reader for .data/ directory.
 //
-// Architecture:
-//   All environments (dev + prod) fetch from GitHub Contents API with a
-//   5-minute in-memory cache. Edge runtime cannot use node:fs, so local
-//   .data/ files are not directly readable from the web layer.
+// Architecture (2026-08 重构):
+//   Data is shipped with the site as static files: build copies .data/ →
+//   public/data/, and _routes.json excludes /data/* from the worker, so
+//   external browsers hit static files directly (no GitHub API, no rate-limit).
 //
-//   The /data/[...path] route (also edge) serves as a cached proxy to the
-//   same GitHub API, providing an additional cache layer for browser requests.
+//   readJson() priority:
+//     1. env.ASSETS.fetch('/data/...') — direct read of the deployed static
+//        file from inside the Cloudflare Pages worker.
+//     2. Relative /data/... self-fetch (Next dev / non-Cloudflare).
+//     3. GitHub Contents API fallback (legacy / compat only).
 //
-//   本地 .data/ 文件只给 scripts/ (generator 等) 使用,不通过 web 访问。
-//
-// GitHub API endpoint:
-//   GET https://api.github.com/repos/{owner}/{repo}/contents/.data/{path}
-//   Headers:
-//     Accept: application/vnd.github.raw+json  (returns raw file content)
-//     User-Agent: affiliate-ai-hub             (required by GitHub API)
-//     Authorization: Bearer {GITHUB_TOKEN}     (optional, for higher rate limit)
+//   This removes the old GitHub-API-at-runtime path that caused 404s and
+//   rate limiting, and — crucially — makes the worker see the same deployed
+//   data as browsers (previously worker self-fetch went back into the
+//   /data/[...path] GitHub proxy, so /api/data/* showed stale remote data
+//   while browsers saw fresh static files).
+
+import { getOptionalRequestContext } from "@cloudflare/next-on-pages";
 
 const DEFAULT_GIT_REPO = "kentpan/cloudflare-affiliate-ai-hub";
 
@@ -47,12 +49,32 @@ const fileCache = new Map<string, CacheEntry<unknown>>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Fetch a JSON file from the /data/[...path] route (cached GitHub API proxy).
- * Returns null on any error.
+ * Fetch a JSON file from the deployed static files (/data/* shipped in
+ * public/data and excluded from the worker via _routes.json).
+ *
+ * Priority (matches readJson):
+ *   1. env.ASSETS.fetch() — direct read of the deployed static file
+ *      (works in Cloudflare Pages worker regardless of _routes.json).
+ *   2. Relative /data/... self-fetch (in Next dev / plain environments).
  */
 async function fetchViaDataRoute<T>(...segments: string[]): Promise<T | null> {
+  // 1. Direct static-file read via ASSETS binding (Cloudflare Pages).
   try {
-    // 相对 URL,在 edge runtime 中可用 (同源请求)
+    const ctx = getOptionalRequestContext<{ ASSETS: Fetcher }>();
+    const env = ctx?.env;
+    if (env?.ASSETS?.fetch) {
+      // ASSETS 只按 pathname 匹配静态文件, host 任意即可
+      const path = `/data/${segments.join("/")}`;
+      const url = `https://assets.local${path}`;
+      const res = await env.ASSETS.fetch(new Request(url));
+      if (res.ok) return (await res.json()) as T;
+    }
+  } catch {
+    // ASSETS unavailable (e.g. plain Next dev) → fall through
+  }
+
+  // 2. Relative URL self-fetch (works when the request re-enters the server).
+  try {
     const url = `/data/${segments.join("/")}`;
     const res = await fetch(url);
     if (!res.ok) return null;

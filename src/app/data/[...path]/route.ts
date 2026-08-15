@@ -1,18 +1,20 @@
-// GET /data/[...path] — 带缓存的 GitHub Contents API 代理。
+// GET /data/[...path] — 数据文件读取路由。
 //
-// Edge runtime (兼容 @cloudflare/next-on-pages 构建,无需在 CI 中删除此文件)。
+// Edge runtime (兼容 @cloudflare/next-on-pages 构建)。
 //
-// 设计说明:
-//   Edge runtime 不能使用 node:fs,因此无法直接读取本地 .data/ 文件。
-//   本路由作为 GitHub Contents API 的缓存代理,所有环境 (dev + prod) 都通过
-//   此路由获取 .data/ 文件,带有 5 分钟内存缓存以减少 GitHub API 调用。
+// 设计说明 (2026-08 重构):
+//   数据已随站点部署为静态文件 (public/data/* → /data/*), 且 _routes.json
+//   将 /data/* 排除在 worker 之外, 外部浏览器请求直接命中静态文件。
+//   但 worker 内部 (readJson → fetch("/data/...")) 的 self-fetch 仍会进入本路由,
+//   因此这里优先通过 env.ASSETS.fetch() 读取同源静态文件,
+//   找不到时才回退到 GitHub Contents API (兼容未部署数据的开发场景)。
 //
-//   本地 .data/ 文件只给 scripts/ (generator 等) 使用,不通过 web 访问。
-//   如需修改本地数据测试,请 push 到 GitHub 仓库。
+//   带 5 分钟内存缓存减少重复请求。
 
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 
 const DEFAULT_GIT_REPO = "kentpan/cloudflare-affiliate-ai-hub";
 
@@ -34,7 +36,7 @@ const fileCache = new Map<string, { data: string; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
@@ -49,7 +51,28 @@ export async function GET(
     });
   }
 
-  // 2. 从 GitHub Contents API 获取
+  const contentType = "application/json; charset=utf-8";
+
+  // 2. 优先读同源静态文件 (public/data/* 已随站点部署为 /data/*)
+  try {
+    const { env } = getRequestContext<{ ASSETS: Fetcher }>();
+    if (env?.ASSETS?.fetch) {
+      const url = new URL(`/data/${segments.join("/")}`, request.url);
+      const assetRes = await env.ASSETS.fetch(url.toString());
+      if (assetRes.ok) {
+        const content = await assetRes.text();
+        fileCache.set(cacheKey, {
+          data: content,
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        });
+        return new NextResponse(content, { headers: { "Content-Type": contentType } });
+      }
+    }
+  } catch {
+    // getRequestContext 在非 Cloudflare 环境 (如纯 Next dev) 不可用 → fallback
+  }
+
+  // 3. Fallback: 从 GitHub Contents API 获取
   try {
     const repo = getGitRepo();
     const url = `https://api.github.com/repos/${repo}/contents/.data/${segments.join("/")}`;

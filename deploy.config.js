@@ -36,6 +36,12 @@ export default {
   // 目标:让 /data/* 直接命中静态文件,不依赖 GitHub API、无限流。
   dataToPublic: { source: '.data', target: 'public/data' },
 
+  // ── 重建 index.json(可选) ──
+  // 启用后, 部署前运行 scripts/rebuild-index.mjs 扫描实际数据目录,
+  // 重建完整的 dates 列表(修复上升最快/新上榜/趋势对比因 index.json 缺日期而为空的问题)。
+  // 值为 index.json 重建脚本的相对路径; 设置为 '' 或删除则跳过。
+  rebuildIndexScript: 'scripts/rebuild-index.mjs',
+
   // ── 静态路由排除:这些路径绕过 worker 直接命中静态文件 ──
   staticExclude: ['/data/*'],
 
