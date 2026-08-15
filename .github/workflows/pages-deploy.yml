@@ -125,17 +125,17 @@ jobs:
           echo "=== Cloudflare auth check (wrangler whoami) ==="
           wrangler whoami 2>&1 || true
 
-          # 判断项目是否存在。注意:不要吞掉 stderr,否则权限/账号错误会被隐藏,
-          # 导致 "create 无输出" 但项目实际没建出来,后面 secret put 才报 "Project does not exist"。
-          if wrangler pages project list 2>&1 | grep -qF "$PROJECT_NAME"; then
+          # 用 awk 取项目列表第一列做精确匹配,避免 grep -qF 子串匹配误判
+          # (例如 "affiliate-ai-hub" 会被 "cloudflare-affiliate-ai-hub" 误匹配而跳过创建)
+          if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
             echo "Pages project '$PROJECT_NAME' already exists, skipping creation"
           else
             echo "Project '$PROJECT_NAME' does not exist, creating with wrangler..."
             wrangler pages project create "$PROJECT_NAME" --production-branch main
             echo "Created Pages project '$PROJECT_NAME'"
 
-            # 验证创建成功（确认项目已进入列表）
-            if wrangler pages project list 2>&1 | grep -qF "$PROJECT_NAME"; then
+            # 验证创建成功（确认项目已进入列表,同样用精确匹配）
+            if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
               echo "Verification passed: project '$PROJECT_NAME' now exists"
             else
               echo "::error::wrangler pages project create 执行完毕但项目仍未出现在列表中"
