@@ -4,7 +4,10 @@ name: Deploy to Cloudflare Pages (Auto on Push)
 # Next.js → Cloudflare Pages 自动部署工作流
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# 触发条件: 推送到 main / master 分支 (排除 .data/*.json 的提交) 或手动触发
+# 触发条件: 推送到 main / master 分支 或手动触发
+#   - 不使用 paths-ignore,确保每次 push 都触发 (更可靠)
+#   - 如果提交信息包含 [skip deploy] 或 [skip ci],job 内部会跳过部署
+#   - daily-picker.yml 的自动选品提交会带 [skip deploy] 标记,避免重复部署
 #
 # 必须在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置:
 #   1. CLOUDFLARE_API_TOKEN  (推荐) 或 CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL
@@ -20,10 +23,6 @@ name: Deploy to Cloudflare Pages (Auto on Push)
 on:
   push:
     branches: [main, master]
-    paths-ignore:
-      - '.data/**'
-      - '**/*.md'
-      - 'public/affiliate-ai-hub-v*.zip'
   workflow_dispatch:
     inputs:
       project_name:
@@ -43,7 +42,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || '' }}
     env:
       # 优先使用细粒度 API Token;fallback 到 Global API Key + Email
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -51,6 +49,9 @@ jobs:
       CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+    # Skip the entire job when the commit message contains [skip deploy] or [skip ci].
+    # daily-picker.yml's auto-pick commits use [skip deploy] to avoid triggering this workflow.
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip deploy]') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -113,6 +114,26 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: npm ci --no-audit --no-fund
+
+      - name: Remove nodejs-only routes for CF Pages build
+        shell: bash
+        run: |
+          # @cloudflare/next-on-pages requires ALL routes to use the Edge Runtime.
+          # The /data/[...path] route uses nodejs runtime (fs/promises) for
+          # fast local file access during development. On CF Pages, this route
+          # is not needed — data-writer.ts falls back to the GitHub Contents API.
+          #
+          # We delete the route file before building so @cloudflare/next-on-pages
+          # doesn't complain about nodejs routes. The local dev experience is
+          # unaffected (the file exists in the repo, just not in the CF build).
+          echo "Removing nodejs-only route: src/app/data/[...path]/route.ts"
+          rm -rf "src/app/data/[...path]"
+          # Verify removal
+          if [ -d "src/app/data/[...path]" ]; then
+            echo "::error::Failed to remove src/app/data/[...path]"
+            exit 1
+          fi
+          echo "✓ Removed nodejs-only route for CF Pages build"
 
       - name: Build Next.js
         shell: bash
