@@ -61,9 +61,9 @@ export const config = {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
-    // v3.9: 统一使用站点级 Bearer (与 matrix-sync SDK 一致)
-    // matrix-tentans /api/feishu-wikis/ingest + /api/full-pipeline/* 都用 site-auth.ts 校验
-    token: process.env.MATRIX_API_KEY,
+    // 推送鉴权: 优先用 RECEIVE_TOKEN (面板/工作流配置),
+    // fallback 到 MATRIX_API_KEY (v3.9 起 matrix-sync 统一用站点级密钥)。
+    token: process.env.RECEIVE_TOKEN || process.env.MATRIX_API_KEY,
   },
   dataDir: DATA_DIR,
   // Concurrency-limit retry policy (per user instruction).

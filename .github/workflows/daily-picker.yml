@@ -1,29 +1,24 @@
 name: Daily Affiliate AI Picker
 
-# NOTE: This workflow has TWO jobs:
-#   1. `pick`   — runs on schedule + workflow_dispatch. Generates .data/*.json
-#                  and commits to main. The commit touches ONLY .data/ files.
-#   2. `deploy` — runs on `push` to main, BUT only when the push includes
-#                  non-.data files (via `paths-ignore`). This is the deploy
-#                  trigger for Cloudflare Pages.
+# NOTE: 本工作流只有一个 job `pick`。
+#   1. schedule / repository_dispatch / workflow_dispatch 触发
+#   2. 生成 .data/*.json 并 commit + push 到 main
+#   3. **在同一 job 内直接部署到 Cloudflare Pages**(步骤从
+#      pages-deploy.yml 完整复制), 不再需要跨 workflow 的 GH_TOKEN dispatch。
 #
-# === Path-based CF Pages trigger filtering ===
-# The `push` trigger below uses `paths-ignore: ['.data/**']` so that the
-# `deploy` job does NOT run when the daily picker commits .data/*.json.
-# It ONLY runs when you push code/config changes (non-.data files).
+# 为什么内联部署而不是另起 deploy job?
+#   - 数据已在工作区 (.data/), 直接复用, 无需 checkout 拉取
+#   - GitHub Actions 中同一 workflow 的 job 共享触发时的 SHA, 独立 job
+#     的 checkout 不会包含 pick 刚 push 的 commit, 必须 git pull, 复杂且易错
 #
-# IMPORTANT: For this to actually control CF Pages deployments, you MUST
-# disable Cloudflare Pages' automatic git integration in the CF dashboard
-# (Settings → Builds & deployments → Disable automatic deployments).
-# Otherwise CF Pages will STILL rebuild on every .data/ commit regardless
-# of this workflow. Once git integration is disabled, this `deploy` job
-# (using wrangler) becomes the sole deploy mechanism.
-#
-# Required repo Secrets for the deploy job:
-#   CLOUDFLARE_API_TOKEN  — API token with Pages:Edit permission
-#   CLOUDFLARE_ACCOUNT_ID — Cloudflare account ID
-# And a repo Variable:
-#   CLOUDFLARE_PAGES_PROJECT — Pages project name (e.g. "affiliate-ai-hub")
+# 必须配置的 repo Secrets:
+#   CLOUDFLARE_API_TOKEN  — Cloudflare API Token (Pages:Edit 权限)
+#   ENCRYPTION_KEY        — 加密密钥 (与本地 .env 一致, 32 位)
+#   ADMIN_SECRET          — 管理界面登录密码 (可选)
+#   GH_TOKEN              — (可选) GitHub PAT, 写入 Pages 供 AI选品按钮触发工作流
+#   DEMO_TOKEN            — (可选) 演示用户登录令牌, 多个用逗号分隔
+#   LLMAI_APIKEY          — (可选) LLM API Key, 无则用启发式模式
+# 各平台联盟 API Secret (AMZ_*/TBK_*/JD_*/GOOGLE_*/PDD_*/DY_*/KS_*/XHS_*)
 
 on:
   schedule:
@@ -47,16 +42,6 @@ on:
         description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
         required: false
         default: ''
-  # push:
-    # branches: [main]
-
-    # Only trigger the deploy job when non-.data files change.
-    # .data/*.json commits (from the pick job) are ignored.
-    # NOTE: we do NOT ignore '**/*.json' globally — that would also skip
-    # deploys when package.json / tsconfig.json change.
-
-    # paths-ignore:
-    #   - '.data/**'
 
 permissions:
   contents: write
@@ -68,11 +53,10 @@ concurrency:
 
 jobs:
   pick:
-    # Only run the picker on schedule, manual dispatch, or external (repository_dispatch) trigger — NOT on push.
-    # Push events are handled by the `deploy` job below.
+    # Only run the picker on schedule, manual dispatch, or external (repository_dispatch) trigger.
     if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     outputs:
       date: ${{ steps.picker.outputs.date }}
       total: ${{ steps.picker.outputs.total }}
@@ -100,8 +84,7 @@ jobs:
           fi
 
       # Run the AI picker — generates .data/{date}/ + pushes to RECEIVE_URL.
-      # Cloudflare Pages is deployed separately via CF Git integration
-      # (CF auto-detects the .data/ commit and rebuilds the frontend).
+      # 部署在下方直接执行 (不再跨 workflow dispatch)。
       - name: Run AI picker
         working-directory: ./scripts
         id: picker
@@ -141,6 +124,8 @@ jobs:
           XHS_APP_SECRET: ${{ secrets.XHS_APP_SECRET }}
           RECEIVE_URL: ${{ secrets.RECEIVE_URL }}
           RECEIVE_TOKEN: ${{ secrets.RECEIVE_TOKEN }}
+          # 兼容旧配置: config.ts 优先读 RECEIVE_TOKEN, fallback MATRIX_API_KEY
+          MATRIX_API_KEY: ${{ secrets.MATRIX_API_KEY }}
           PICKER_DATE: ${{ github.event.inputs.date || github.event.client_payload.date }}
           MANUAL_LLM_KEY: ${{ github.event.inputs.llm_apikey || github.event.client_payload.llm_apikey }}
           USE_LLM_INPUT: ${{ github.event.inputs.use_llm || github.event.client_payload.use_llm }}
@@ -217,6 +202,19 @@ jobs:
           [ -f "../.data/index.json" ] || { echo "ERROR: index.json missing"; exit 1; }
           jq -r '"Total: \(.totalCount) | AvgScore: \(.avgScore) | Revenue: \(.totalExpectedRevenue)"' "${DATA_DIR}/summary.json"
 
+      # ── 重建 index.json(部署前置步骤) ──
+      # 在 commit 之前运行, 确保 main 上也是完整日期列表。
+      - name: Rebuild index.json from data dirs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f scripts/rebuild-index.mjs ]; then
+            node scripts/rebuild-index.mjs .data
+            echo "✓ index.json rebuilt (dates: $(node -e "console.log(require('./.data/index.json').dates.length)") )"
+          else
+            echo "ℹ️ scripts/rebuild-index.mjs not found — skipping index rebuild"
+          fi
+
       - name: Upload .data artifact
         uses: actions/upload-artifact@v4
         with:
@@ -224,37 +222,280 @@ jobs:
           path: .data/
           retention-days: 90
 
-      # Commit .data/ to main. This commit touches ONLY .data/** files, so
-      # the `push` trigger's `paths-ignore: ['.data/**']` filter will prevent
-      # the `deploy` job from running. CF Pages (if git integration is
-      # disabled per the workflow header instructions) will also NOT rebuild.
+      # Commit .data/ to main. 部署在同一 job 下方直接执行,
+      # 不依赖 push 事件 (GITHUB_TOKEN push 不会触发其他 workflow)。
       - name: Commit .data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .data/
-          git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items) [skip deploy]" || echo "no changes to commit"
+          git commit -m "chore(data): daily pick ${{ steps.picker.outputs.date }} (${{ steps.picker.outputs.total }} items)" || echo "no changes to commit"
           git push || echo "push failed (possibly no changes)"
 
-      # 触发 pages-deploy.yml 重新部署到 Cloudflare Pages。
-      # 需要 repo secret GH_TOKEN (GitHub PAT, workflow scope 权限)。
-      # 若未配置 GH_TOKEN,则依赖 push 事件触发 pages-deploy.yml (其 push 触发器)。
-      - name: Trigger Cloudflare Pages redeploy
-        if: ${{ always() && steps.picker.outputs.date != '' }}
+      # ═══════════════════════════════════════════════════════════════════
+      # 以下步骤从 pages-deploy.yml 完整复制(部署到 Cloudflare Pages)。
+      # 使用 deploy.config.js 作为配置源, 保证与手动部署完全一致。
+      # ═══════════════════════════════════════════════════════════════════
+
+      - name: Install wrangler
+        shell: bash
+        run: npm install -g wrangler
+
+      - name: Verify required secrets
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "GH_TOKEN not configured — push 事件会自动触发 pages-deploy.yml"
-            exit 0
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Missing CLOUDFLARE_API_TOKEN secret."
+            exit 1
           fi
-          echo "Triggering pages-deploy.yml via workflow_dispatch..."
-          curl -sS -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages-deploy.yml/dispatches \
-            -d '{"ref":"main"}'
-          echo "Dispatched pages-deploy.yml"
+          if [ -z "$ENCRYPTION_KEY" ]; then
+            echo "::error::Missing ENCRYPTION_KEY secret."
+            exit 1
+          fi
+          echo "✓ Required secrets present."
+
+      - name: Read deploy.config.js
+        id: deploy-config
+        shell: bash
+        run: |
+          # 读取 deploy.config.js 配置(ESM 格式)。
+          # 一次 import 输出所有字段为 KEY=VALUE 行, 写入 GITHUB_ENV
+          node -e "import('./deploy.config.js').then(m => {
+            const c = m.default || {};
+            const out = {
+              PROJECT_NAME: c.projectName || '',
+              BUILD_CMD: c.buildCommand || 'npm run build',
+              PAGES_BUILD_CMD: c.pagesBuildCommand || '',
+              OUTPUT_DIR: c.outputDir || '.vercel/output/static',
+              DATA_SRC: (c.dataToPublic && c.dataToPublic.source) || '',
+              DATA_TGT: (c.dataToPublic && c.dataToPublic.target) || '',
+              REBUILD_INDEX_SCRIPT: c.rebuildIndexScript || '',
+              STATIC_EXCLUDE: JSON.stringify(c.staticExclude || []),
+              SECRETS_MAP: JSON.stringify(c.secrets || {}),
+              RUNTIME_SECRETS: JSON.stringify(c.runtimeSecrets || []),
+              D1_NAME: c.d1Name || '',
+              KV_NAME: c.kvName || '',
+              D1_ID: c.d1Id || '',
+              KV_ID: c.kvId || '',
+            };
+            for (const [k, v] of Object.entries(out)) console.log(k + '=' + v);
+          })" >> "$GITHUB_ENV"
+
+          echo "::notice::配置: project=$PROJECT_NAME, output=$(grep '^OUTPUT_DIR=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)"
+          cat "$GITHUB_ENV" | grep -E '^(PROJECT_NAME|BUILD_CMD|OUTPUT_DIR|DATA_SRC|DATA_TGT|D1_NAME|KV_NAME)='
+
+      - name: Validate projectName
+        shell: bash
+        run: |
+          if [ -z "${{ env.PROJECT_NAME }}" ]; then
+            echo "::error::deploy.config.js 中 projectName 为空! 请设置 Cloudflare Pages 项目名称。"
+            exit 1
+          fi
+          echo "✅ projectName: ${{ env.PROJECT_NAME }}"
+
+      - name: Resolve Cloudflare Account ID
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          ACCOUNT_ID=$(wrangler whoami 2>/dev/null | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
+          if [ -z "$ACCOUNT_ID" ]; then
+            echo "::error::Could not resolve Cloudflare Account ID. Check your API token has the 'User Details: Read' permission."
+            exit 1
+          fi
+          echo "Resolved Account ID: $ACCOUNT_ID"
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+
+      # ── 数据目录 → public/(可选) ──
+      # 把本地数据(如 .data)复制到 public/, 随站点部署为静态文件。
+      - name: Copy data to public (deploy data with site)
+        if: env.DATA_SRC != '' && env.DATA_TGT != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$DATA_TGT")"
+          cp -r "$DATA_SRC/." "$DATA_TGT/"
+          echo "✓ Copied $(find "$DATA_TGT" -type f | wc -l) data files from $DATA_SRC to $DATA_TGT/"
+
+      - name: Read build env from deploy.config.js
+        id: build-env
+        shell: bash
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          # 把 deploy.config.js 的 buildEnv 写入 GITHUB_ENV, 供 Build 步骤注入。
+          # deploy.config.js 中的 {GITHUB_REPOSITORY} 占位符会被替换为实际仓库名。
+          node -e "import('./deploy.config.js').then(m => {
+            const c = m.default || {};
+            const envMap = c.buildEnv || {};
+            const repo = process.env.GITHUB_REPO || '';
+            for (const [k, v] of Object.entries(envMap)) {
+              const resolved = String(v).replaceAll('{GITHUB_REPOSITORY}', repo);
+              console.log(k + '=' + resolved);
+            }
+          })" >> "$GITHUB_ENV"
+          echo "::notice::buildEnv applied"
+
+      - name: Build project
+        shell: bash
+        run: |
+          if [ -n "$PAGES_BUILD_CMD" ]; then
+            $PAGES_BUILD_CMD
+          else
+            $BUILD_CMD
+          fi
+        env:
+          # 来自 deploy.config.js 的 buildEnv(在 Read build env 步骤写入 GITHUB_ENV)
+          NEXT_PUBLIC_GIT_REPO: ${{ env.NEXT_PUBLIC_GIT_REPO }}
+          NEXT_PUBLIC_DATA_URL: ${{ env.NEXT_PUBLIC_DATA_URL }}
+
+      # ── 静态路由排除(可选) ──
+      # 把 STATIC_EXCLUDE 列表加入 _routes.json 的 exclude, 绕过 worker 直接命中静态文件。
+      - name: Route static paths to files (bypass worker)
+        if: env.STATIC_EXCLUDE != '[]'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROUTES="$OUTPUT_DIR/_routes.json"
+          if [ -f "$ROUTES" ]; then
+            EXCLUDES=$(node -e 'const fs=require("fs");const p=process.argv[1];const paths=JSON.parse(process.argv[2]);const d=JSON.parse(fs.readFileSync(p,"utf8"));for(const x of paths){if(!d.exclude.includes(x))d.exclude.push(x);}fs.writeFileSync(p,JSON.stringify(d));console.log("exclude:",d.exclude.join(","));' "$ROUTES" "$STATIC_EXCLUDE")
+            echo "✓ $EXCLUDES"
+          else
+            echo "::warning::_routes.json not found — cannot apply static excludes"
+          fi
+
+      - name: Verify build output
+        shell: bash
+        run: |
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            echo "::error::Build output $OUTPUT_DIR not found — build failed."
+            ls -la "$OUTPUT_DIR" 2>/dev/null || echo "(no output directory at all)"
+            exit 1
+          fi
+          echo "✓ Build output verified: $OUTPUT_DIR"
+          ls -la "$OUTPUT_DIR" | head -20
+
+      - name: Create Pages project if not exists
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          set -euo pipefail
+
+          echo "=== Cloudflare auth check (wrangler whoami) ==="
+          wrangler whoami 2>&1 || true
+
+          # 用 awk 取项目列表第一列做精确匹配, 避免 grep -qF 子串匹配误判
+          if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
+            echo "Pages project '$PROJECT_NAME' already exists, skipping creation"
+          else
+            echo "Project '$PROJECT_NAME' does not exist, creating with wrangler..."
+            wrangler pages project create "$PROJECT_NAME" --production-branch main
+            echo "Created Pages project '$PROJECT_NAME'"
+
+            if wrangler pages project list 2>&1 | awk -v name="$PROJECT_NAME" '$2 == name { found=1 } END { exit !found }'; then
+              echo "Verification passed: project '$PROJECT_NAME' now exists"
+            else
+              echo "::error::wrangler pages project create 执行完毕但项目仍未出现在列表中"
+              echo "::error::可能原因: API Token 缺少 Cloudflare Pages:Edit 权限, 或账号 ID 无法解析"
+              exit 1
+            fi
+          fi
+
+      - name: Configure secrets on Pages project
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          DEMO_TOKEN: ${{ secrets.DEMO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          echo "=== Target project: $PROJECT_NAME ==="
+          wrangler pages project list 2>&1 | grep -qF "$PROJECT_NAME" || {
+            echo "::error::Pages project '$PROJECT_NAME' not found — run 'Create Pages project' step first."
+            exit 1
+          }
+
+          # ── 业务 secrets (来自 deploy.config.js 的 secrets 映射) ──
+          # SECRETS_MAP 格式: JSON 对象 { "WORKFLOW_ENV_NAME": "PAGES_SECRET_NAME" }
+          # 从同名 job env 读取值, 写入 Pages。
+          echo "$SECRETS_MAP" | node -e '
+            const fs = require("fs");
+            const map = JSON.parse(fs.readFileSync(0, "utf8"));
+            for (const [src, tgt] of Object.entries(map)) {
+              console.log(`${src}\t${tgt}`);
+            }
+          ' | while IFS=$'\t' read -r src tgt; do
+            value="${!src:-}"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | wrangler pages secret put "$tgt" --project-name "$PROJECT_NAME"
+              echo "✓ secret $tgt written (from $src)"
+            else
+              echo "ℹ️ secret $src not set — skipped"
+            fi
+          done
+
+          # ── Cloudflare 运行变量(凭证面板需要) ──
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is empty — cannot write runtime env."
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty — cannot write runtime env."
+            exit 1
+          fi
+          printf '%s' "$CLOUDFLARE_API_TOKEN" | wrangler pages secret put CLOUDFLARE_API_TOKEN --project-name "$PROJECT_NAME"
+          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | wrangler pages secret put CLOUDFLARE_ACCOUNT_ID --project-name "$PROJECT_NAME"
+          printf '%s' "$PROJECT_NAME" | wrangler pages secret put CLOUDFLARE_PAGES_PROJECT --project-name "$PROJECT_NAME"
+
+          # ── 可选的 D1 / KV 绑定(wrangler.toml 由 demo 模板驱动) ──
+          # 本项目未使用 D1/KV, 如需可参考 scripts/pages-deploy-demo.yml 的 Generate wrangler.toml 步骤。
+
+          echo "✓ Secrets configured"
+
+      - name: Deploy to Cloudflare Pages
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          wrangler pages deploy "$OUTPUT_DIR" --project-name "$PROJECT_NAME" --branch main --commit-dirty
+
+          # Resolve the real *.pages.dev subdomain via the CF API
+          PROJECT_DETAILS=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          RAW_SUBDOMAIN=$(echo "$PROJECT_DETAILS" | jq -r '.result.subdomain // empty' | tr -d '\r\n')
+          DEPLOY_URL="https://${RAW_SUBDOMAIN:-$PROJECT_NAME}.pages.dev"
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+          echo "::notice::Deployment URL: $DEPLOY_URL"
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Cloudflare Pages 自动部署 ${{ job.status == 'success' && '✅' || '❌' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 配置项 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 选品日期 | ${{ steps.picker.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 选品数量 | ${{ steps.picker.outputs.total }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pages 项目 | $PROJECT_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| 输出目录 | $OUTPUT_DIR |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发分支 | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 访问地址 | ${{ env.DEPLOY_URL || '(部署失败)' }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Summary
         run: |
@@ -264,112 +505,7 @@ jobs:
           echo "- **Total picks**: ${{ steps.picker.outputs.total }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Artifact**: affiliate-data-${{ steps.picker.outputs.date }} (90-day retention)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **RECEIVE_URL**: pushed if configured" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Deploy**: pages-deploy.yml re-triggered (via GH_TOKEN or push)" >> "$GITHUB_STEP_SUMMARY"
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Deploy job — runs ONLY on push events where non-.data files changed.
-  # This is the path-filtered Cloudflare Pages deploy mechanism.
-  #
-  # Prerequisite: Disable CF Pages automatic git integration in the CF
-  # dashboard, otherwise CF Pages will still rebuild on every .data/ commit
-  # regardless of this paths-ignore filter.
-  # ─────────────────────────────────────────────────────────────────────────
-  deploy:
-    if: ${{ github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check if CF Pages secrets are configured
-        id: cf_check
-        env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
-        run: |
-          if [ -n "${CF_TOKEN}" ] && [ -n "${CF_ACCOUNT}" ] && [ -n "${CF_PROJECT}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "✓ CF Pages secrets configured — will deploy to project: ${CF_PROJECT}"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "⚠ CF Pages secrets not configured — skipping deploy (build only)"
-          fi
-
-      - name: Setup Node v22 LTS
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      # Install dependencies. package-lock.json is committed to the repo
-      # and is in sync with package.json (including the platform-specific
-      # optionalDependencies: @tailwindcss/oxide-linux-x64-gnu,
-      # lightningcss-linux-x64-gnu). `npm ci` installs from the lock file.
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_GIT_REPO: ${{ github.repository }}
-          NEXT_PUBLIC_DATA_URL: https://raw.githubusercontent.com/${{ github.repository }}/main
-
-      - name: Build for Cloudflare Pages
-        if: ${{ steps.cf_check.outputs.configured == 'true' }}
-        run: npx @cloudflare/next-on-pages@1
-
-      # ─── Deploy to Cloudflare Pages ──────────────────────────────────────
-      # nodejs_compat flag is configured in `wrangler.toml` at the project
-      # root — the OFFICIAL documented way. wrangler reads it automatically
-      # at deploy time. No CLI flags needed.
-      #
-      # `wrangler.toml` contains:
-      #   compatibility_date = "2024-09-23"
-      #   compatibility_flags = ["nodejs_compat"]
-      #   pages_build_output_dir = ".vercel/output/static"
-      #
-      # Previous failed attempts (v6.6.0, v6.7.0):
-      #   - CF API PATCH only → didn't apply at deploy time
-      #   - wrangler CLI --compatibility-flag → still failed
-      # The wrangler.toml approach is read directly by wrangler and is the
-      # most reliable way to set compatibility flags.
-      # ──────────────────────────────────────────────────────────────────────
-      - name: Verify wrangler.toml has nodejs_compat
-        if: ${{ steps.cf_check.outputs.configured == 'true' }}
-        run: |
-          if [ ! -f wrangler.toml ]; then
-            echo "❌ ERROR: wrangler.toml not found!"
-            exit 1
-          fi
-          if ! grep -q "nodejs_compat" wrangler.toml; then
-            echo "❌ ERROR: nodejs_compat not found in wrangler.toml!"
-            exit 1
-          fi
-          echo "✓ wrangler.toml verified:"
-          grep -E "compatibility_date|compatibility_flags|pages_build_output_dir" wrangler.toml
-
-      - name: Deploy to Cloudflare Pages (via wrangler.toml)
-        if: ${{ steps.cf_check.outputs.configured == 'true' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          # wrangler.toml at project root is read automatically.
-          # --project-name overrides the `name` in wrangler.toml if the
-          # CF Pages project has a different name.
-          npx wrangler@latest pages deploy .vercel/output/static \
-            --project-name="${{ vars.CLOUDFLARE_PAGES_PROJECT }}" \
-            --branch=main
-
-      - name: Deploy Summary
-        if: ${{ always() }}
-        run: |
-          echo "### Deploy Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Trigger**: push to ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Commit**: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **CF Pages deploy**: ${{ steps.cf_check.outputs.configured == 'true' && '✓ deployed' || '⤵ skipped (secrets not configured, build-only)' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **nodejs_compat flag**: set via wrangler.toml (read by wrangler at deploy time)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Deploy**: 同 job 内直接部署到 Cloudflare Pages" >> "$GITHUB_STEP_SUMMARY"
 
   notify-failure:
     runs-on: ubuntu-latest
@@ -394,6 +530,7 @@ jobs:
                 `- LLM concurrency limit (retry 3s x 10 already configured)`,
                 `- Missing GitHub Secrets (LLMAI_APIKEY required for AI mode)`,
                 `- Affiliate API credentials expired`,
+                `- Cloudflare deploy failure (CLOUDFLARE_API_TOKEN / ENCRYPTION_KEY)`,
                 ``,
                 `Please check the workflow logs and re-run manually after fixing.`,
               ].join('\n'),
