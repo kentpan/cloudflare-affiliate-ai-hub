@@ -10,7 +10,10 @@ const DATA_DIR = process.env.DATA_DIR || ".data";
 export const config = {
   llm: {
     // z-ai-web-dev-sdk is the default backend AI provider in this stack.
-    baseURL: process.env.LLMAI_BASE_URL ?? "https://llmapi.xubaoge.com/v1",
+    // 注意: GitHub Actions 里 secrets.LLMAI_BASE_URL 未配置时注入的是空字符串
+    // "", 必须用 || (空串也兜底) 而不是 ?? (只兜底 null/undefined), 否则
+    // SDK 会拼出相对路径 /chat/completions 直接崩溃。
+    baseURL: process.env.LLMAI_BASE_URL || "https://llmapi.xubaoge.com/v1",
     apiKey: process.env.LLMAI_APIKEY ?? "",
     model: process.env.LLMAI_MODEL ?? "glm-5.2",
   },

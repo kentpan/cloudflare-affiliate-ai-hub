@@ -43,6 +43,11 @@ export interface GenerateOptions {
   // When true, skip the LLM call and use the heuristic fallback (used for
   // seeding initial data without burning LLM quota).
   useLlm?: boolean;
+  // When true and data for `date` already exists, skip regeneration entirely
+  // and just re-push the existing summary to RECEIVE_URL targets.
+  // Used by the daily schedule so a same-day re-run (e.g. a previous manual
+  // trigger already generated today) doesn't burn LLM quota or overwrite data.
+  skipIfExists?: boolean;
 }
 
 export interface GenerateResult {
@@ -61,12 +66,36 @@ export async function generateDaily(opts: GenerateOptions = {}): Promise<Generat
   const dir = ensureDateDirSync(date);
   const useLlm = opts.useLlm ?? true;
 
+  // skipIfExists: 当天数据已存在则跳过选品, 只重新推送现有 summary。
+  // 用于每日定时任务: 若当天已被手动触发过/已生成, 不重复消耗 LLM quota。
+  if (opts.skipIfExists) {
+    // 注意: readJsonSync 内部已拼 getDataDir(), 传入 segments 而非 dataPath(),
+    // 否则路径会变成 DATA_DIR/DATA_DIR/... 导致读不到文件。
+    const existing = readJsonSync<DailySummary>(date, "summary.json");
+    if (existing) {
+      console.log(`[generator] data for ${date} already exists — skipping regeneration`);
+      await pushToTargets({ date, summary: existing });
+      return {
+        date,
+        totals: Object.fromEntries(
+          PLATFORMS.map((p) => [p, { raw: 0, picked: existing.platforms?.[p]?.count ?? 0 }]),
+        ) as GenerateResult["totals"],
+        total: existing.totalCount ?? 0,
+        durationMs: Date.now() - start,
+        llmUsed: false,
+        llmAttempts: 0,
+        llmRetried: false,
+      };
+    }
+    console.log(`[generator] no existing data for ${date} — running picker`);
+  }
+
   // Overwrite semantics: if data for this date already exists (from an earlier
   // run today), it is fully replaced. writeJsonSync() uses fs.writeFileSync which
   // overwrites by default. This matches the requirement: manual trigger /
   // scheduled run / main-branch push all overwrite the same-day data with the
   // latest results. To preserve history, each date is a separate directory.
-  const existingIndex = readJsonSync<{ updatedAt?: string }>(dataPath(date, "summary.json"));
+  const existingIndex = readJsonSync<{ updatedAt?: string }>(date, "summary.json");
   if (existingIndex) {
     console.log(`[generator] overwriting existing data for ${date}`);
   }

@@ -42,6 +42,10 @@ on:
         description: 'Use LLM for AI analysis (true|false, default: auto-detect: true if key provided, else false)'
         required: false
         default: ''
+      skip_if_exists:
+        description: 'Skip regeneration if today data already exists (still deploys + pushes)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -163,6 +167,12 @@ jobs:
           fi
           if [ "${USE_LLM}" = "false" ]; then
             ARGS="${ARGS} --no-llm"
+          fi
+          # 跳过已存在数据: schedule 定时任务默认跳过(避免当天数据已存在时
+          # 重复消耗 LLM quota); 手动触发可通过 skip_if_exists input 显式开启。
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.skip_if_exists }}" = "true" ]; then
+            ARGS="${ARGS} --skip-if-exists"
+            echo "skip-if-exists: enabled (data already on main will be reused, still pushes + deploys)"
           fi
 
           echo "Running: tsx src/index.ts ${ARGS}"

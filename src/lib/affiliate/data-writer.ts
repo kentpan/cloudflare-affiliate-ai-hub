@@ -59,10 +59,14 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
  */
 async function fetchViaDataRoute<T>(...segments: string[]): Promise<T | null> {
   // 1. Direct static-file read via ASSETS binding (Cloudflare Pages).
+  // 注: 不用全局 Fetcher 类型(scripts 的 tsconfig 是纯 Node, 无 Cloudflare
+  // Workers 类型), 改用宽松接口断言。
   try {
-    const ctx = getOptionalRequestContext<{ ASSETS: Fetcher }>();
-    const env = ctx?.env;
-    if (env?.ASSETS?.fetch) {
+    const ctx = getOptionalRequestContext();
+    const env = (ctx?.env ?? {}) as {
+      ASSETS?: { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> };
+    };
+    if (env.ASSETS?.fetch) {
       // ASSETS 只按 pathname 匹配静态文件, host 任意即可
       const path = `/data/${segments.join("/")}`;
       const url = `https://assets.local${path}`;

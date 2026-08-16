@@ -5,7 +5,7 @@
 // independently of the web app. It reuses the shared affiliate library that
 // lives in ../web/src/lib/affiliate/ to avoid logic duplication.
 //
-// Usage:  tsx src/index.ts [--date YYYY-MM-DD] [--no-llm] [seed]
+// Usage:  tsx src/index.ts [--date YYYY-MM-DD] [--no-llm] [--skip-if-exists] [seed]
 //
 // LLM concurrency-limit retry policy: when the model returns
 // "model glm-5.2 concurrency limit exceeded", the llm-client waits 3s and
@@ -31,6 +31,7 @@ const args = process.argv.slice(2);
 const dateArgIdx = args.indexOf("--date");
 const date = dateArgIdx >= 0 ? args[dateArgIdx + 1] : undefined;
 const useLlm = !args.includes("--no-llm");
+const skipIfExists = args.includes("--skip-if-exists");
 const action = args.find((a) => !a.startsWith("--") && a !== date);
 
 async function main() {
@@ -46,6 +47,7 @@ async function main() {
     date: target,
     source: "scheduled",
     useLlm,
+    skipIfExists,
   });
   console.log("[scripts] done:", {
     date: res.date,
