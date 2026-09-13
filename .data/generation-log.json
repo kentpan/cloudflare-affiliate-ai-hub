@@ -1,7 +1,7 @@
 [
   {
-    "timestamp": "2026-09-12T04:06:08.159Z",
-    "date": "2026-09-12",
+    "timestamp": "2026-09-13T04:17:36.104Z",
+    "date": "2026-09-13",
     "platforms": {
       "amazon": {
         "raw": 30,
@@ -37,7 +37,7 @@
       }
     },
     "total": 153,
-    "durationMs": 2783,
+    "durationMs": 2816,
     "source": "scheduled",
     "llmUsed": true
   }
