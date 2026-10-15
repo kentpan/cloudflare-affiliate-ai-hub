@@ -1,0 +1,835 @@
+{
+  "date": "2026-10-15",
+  "generatedAt": "2026-10-15T04:07:41.712Z",
+  "platforms": {
+    "amazon": {
+      "count": 18,
+      "avgCommission": 24.25,
+      "topCategory": "会员点卡",
+      "avgScore": 75.4,
+      "totalExpectedRevenue": 193.25
+    },
+    "taobao": {
+      "count": 24,
+      "avgCommission": 28.05,
+      "topCategory": "数码电子",
+      "avgScore": 86.13,
+      "totalExpectedRevenue": 2212.71
+    },
+    "jd": {
+      "count": 21,
+      "avgCommission": 27.02,
+      "topCategory": "数字内容",
+      "avgScore": 84.72,
+      "totalExpectedRevenue": 1384.21
+    },
+    "google": {
+      "count": 15,
+      "avgCommission": 5.05,
+      "topCategory": "数字内容",
+      "avgScore": 59.52,
+      "totalExpectedRevenue": 43.62
+    },
+    "pdd": {
+      "count": 21,
+      "avgCommission": 33.22,
+      "topCategory": "数码电子",
+      "avgScore": 86.41,
+      "totalExpectedRevenue": 1805.9
+    },
+    "douyin": {
+      "count": 21,
+      "avgCommission": 31.58,
+      "topCategory": "数字内容",
+      "avgScore": 88.75,
+      "totalExpectedRevenue": 2976.35
+    },
+    "kuaishou": {
+      "count": 18,
+      "avgCommission": 30.94,
+      "topCategory": "SaaS服务",
+      "avgScore": 84.39,
+      "totalExpectedRevenue": 1389.85
+    },
+    "xhs": {
+      "count": 15,
+      "avgCommission": 25.79,
+      "topCategory": "数字内容",
+      "avgScore": 86.64,
+      "totalExpectedRevenue": 1289.91
+    }
+  },
+  "topPicks": [
+    {
+      "id": "tbk-1792037260154-32-ovakzq",
+      "platform": "taobao",
+      "title": "UI/UX设计师就业班 Figma+作品集",
+      "price": 1156.11,
+      "originalPrice": 1653.24,
+      "commissionRate": 35.11,
+      "salesVolume": 6196,
+      "rating": 4.78,
+      "reviewCount": 7627,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/tbk32designcourse/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 275,
+      "shopName": "站酷高高手",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 100,
+      "expectedRevenue": 405.91,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金35.11%，预期收益¥405.91",
+      "aiTags": [
+        "taobao",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+6196销量，转化预期佳",
+      "directionId": "online-courses"
+    },
+    {
+      "id": "douyin-1792037261261-25-no2g1x",
+      "platform": "douyin",
+      "title": "抖音爆款 UI/UX设计师就业班 Figma+作品集",
+      "price": 1052.19,
+      "originalPrice": 1672.98,
+      "commissionRate": 31.3,
+      "salesVolume": 8463,
+      "rating": 4.85,
+      "reviewCount": 2317,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/dy25designcourse/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 309,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 100,
+      "expectedRevenue": 329.34,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金31.3%，预期收益¥329.34",
+      "aiTags": [
+        "douyin",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+8463销量，转化预期佳",
+      "directionId": "online-courses"
+    },
+    {
+      "id": "douyin-1792037261261-28-9cv11i",
+      "platform": "douyin",
+      "title": "抖音爆款 UI/UX设计师就业班 Figma+作品集",
+      "price": 1389.93,
+      "originalPrice": 2057.1,
+      "commissionRate": 39.45,
+      "salesVolume": 9192,
+      "rating": 4.85,
+      "reviewCount": 6811,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/dy28designcourse/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 317,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 100,
+      "expectedRevenue": 548.33,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金39.45%，预期收益¥548.33",
+      "aiTags": [
+        "douyin",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+9192销量，转化预期佳",
+      "directionId": "online-courses"
+    },
+    {
+      "id": "kuaishou-1792037261414-21-cs33ev",
+      "platform": "kuaishou",
+      "title": "快手优选 UI/UX设计师就业班 Figma+作品集",
+      "price": 1026.21,
+      "originalPrice": 1303.29,
+      "commissionRate": 26.19,
+      "salesVolume": 9137,
+      "rating": 4.81,
+      "reviewCount": 13303,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/ks21designcourse/400/300",
+      "link": "https://www.kuaishou.com/",
+      "couponAmount": 272,
+      "shopName": "快手电商",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 99.91,
+      "expectedRevenue": 268.76,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金26.19%，预期收益¥268.76",
+      "aiTags": [
+        "kuaishou",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+9137销量，转化预期佳",
+      "directionId": "online-courses"
+    },
+    {
+      "id": "douyin-1792037261260-6-lxzjte",
+      "platform": "douyin",
+      "title": "抖音爆款 UI/UX设计师就业班 Figma+作品集",
+      "price": 1376.94,
+      "originalPrice": 1666.1,
+      "commissionRate": 30.23,
+      "salesVolume": 4308,
+      "rating": 4.74,
+      "reviewCount": 14887,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/dy6designcourse/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 308,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 99.22,
+      "expectedRevenue": 416.25,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金30.23%，预期收益¥416.25",
+      "aiTags": [
+        "douyin",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+4308销量，转化预期佳",
+      "directionId": "online-courses"
+    },
+    {
+      "id": "tbk-1792037260154-11-w3pbew",
+      "platform": "taobao",
+      "title": "Figma专业版 年订阅 UI设计协作",
+      "price": 556.2,
+      "originalPrice": 878.8,
+      "commissionRate": 25.93,
+      "salesVolume": 5863,
+      "rating": 4.93,
+      "reviewCount": 6112,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/tbk11uidesigntool/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 101,
+      "shopName": "Figma官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 95.74,
+      "expectedRevenue": 144.22,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金25.93%，预期收益¥144.22",
+      "aiTags": [
+        "taobao",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+5863销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "pdd-1792037261112-29-ngjwa4",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 福昕PDF编辑器高级版 永久授权 商务办公",
+      "price": 371.07,
+      "originalPrice": 567.74,
+      "commissionRate": 48.7,
+      "salesVolume": 5250,
+      "rating": 4.61,
+      "reviewCount": 9037,
+      "category": "软件工具",
+      "imageUrl": "https://picsum.photos/seed/pdd29pdfeditor/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 112,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 94.92,
+      "expectedRevenue": 180.71,
+      "aiCopy": "爆款推荐｜软件工具好物，佣金48.7%，预期收益¥180.71",
+      "aiTags": [
+        "pdd",
+        "软件工具",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+5250销量，转化预期佳",
+      "directionId": "software-tools"
+    },
+    {
+      "id": "pdd-1792037261112-25-4xspst",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 4K视频素材包200GB 短视频剪辑商用授权",
+      "price": 316.94,
+      "originalPrice": 529.29,
+      "commissionRate": 36.85,
+      "salesVolume": 5475,
+      "rating": 4.9,
+      "reviewCount": 5434,
+      "category": "数字内容",
+      "imageUrl": "https://picsum.photos/seed/pdd25videofootage/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 76,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 94.26,
+      "expectedRevenue": 116.79,
+      "aiCopy": "爆款推荐｜数字内容好物，佣金36.85%，预期收益¥116.79",
+      "aiTags": [
+        "pdd",
+        "数字内容",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+5475销量，转化预期佳",
+      "directionId": "digital-content"
+    },
+    {
+      "id": "pdd-1792037261112-32-84xh68",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 Figma专业版 年订阅 UI设计协作",
+      "price": 577.8,
+      "originalPrice": 901.37,
+      "commissionRate": 26.39,
+      "salesVolume": 5249,
+      "rating": 4.88,
+      "reviewCount": 4655,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/pdd32uidesigntool/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 69,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 94.19,
+      "expectedRevenue": 152.48,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金26.39%，预期收益¥152.48",
+      "aiTags": [
+        "pdd",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+5249销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "pdd-1792037261112-23-6hauzi",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 京东PLUS会员年卡 京豆+免邮+专属价",
+      "price": 123.67,
+      "originalPrice": 176.85,
+      "commissionRate": 52.76,
+      "salesVolume": 49262,
+      "rating": 4.92,
+      "reviewCount": 39890,
+      "category": "会员点卡",
+      "imageUrl": "https://picsum.photos/seed/pdd23membershipcard/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 48,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 93.59,
+      "expectedRevenue": 65.25,
+      "aiCopy": "爆款推荐｜会员点卡好物，佣金52.76%，预期收益¥65.25",
+      "aiTags": [
+        "pdd",
+        "会员点卡",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+49262销量，转化预期佳",
+      "directionId": "membership-cards"
+    },
+    {
+      "id": "kuaishou-1792037261414-2-tw3sbm",
+      "platform": "kuaishou",
+      "title": "快手优选 Figma专业版 年订阅 UI设计协作",
+      "price": 594,
+      "originalPrice": 766.26,
+      "commissionRate": 32.77,
+      "salesVolume": 3262,
+      "rating": 4.96,
+      "reviewCount": 6979,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/ks2uidesigntool/400/300",
+      "link": "https://www.kuaishou.com/",
+      "couponAmount": 65,
+      "shopName": "快手电商",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 93.41,
+      "expectedRevenue": 194.65,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金32.77%，预期收益¥194.65",
+      "aiTags": [
+        "kuaishou",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+3262销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "tbk-1792037260154-12-ro4e7n",
+      "platform": "taobao",
+      "title": "Figma专业版 年订阅 UI设计协作",
+      "price": 518.4,
+      "originalPrice": 917.57,
+      "commissionRate": 32.69,
+      "salesVolume": 2555,
+      "rating": 4.84,
+      "reviewCount": 4433,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/tbk12uidesigntool/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 80,
+      "shopName": "Figma官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 93.24,
+      "expectedRevenue": 169.46,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金32.69%，预期收益¥169.46",
+      "aiTags": [
+        "taobao",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+2555销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "douyin-1792037261261-17-rhg6ri",
+      "platform": "douyin",
+      "title": "抖音爆款 Notion Plus个人版 年订阅 笔记知识库",
+      "price": 264.96,
+      "originalPrice": 317.95,
+      "commissionRate": 37.55,
+      "salesVolume": 6910,
+      "rating": 4.8,
+      "reviewCount": 12346,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/dy17notessaas/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 71,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 92.94,
+      "expectedRevenue": 99.49,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金37.55%，预期收益¥99.49",
+      "aiTags": [
+        "douyin",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+6910销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "pdd-1792037261112-7-j2ktov",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 京东PLUS会员年卡 京豆+免邮+专属价",
+      "price": 146.02,
+      "originalPrice": 189.83,
+      "commissionRate": 52.83,
+      "salesVolume": 37516,
+      "rating": 4.95,
+      "reviewCount": 96956,
+      "category": "会员点卡",
+      "imageUrl": "https://picsum.photos/seed/pdd7membershipcard/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 43,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 92.66,
+      "expectedRevenue": 77.14,
+      "aiCopy": "爆款推荐｜会员点卡好物，佣金52.83%，预期收益¥77.14",
+      "aiTags": [
+        "pdd",
+        "会员点卡",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+37516销量，转化预期佳",
+      "directionId": "membership-cards"
+    },
+    {
+      "id": "jd-1792037260805-22-hptc12",
+      "platform": "jd",
+      "title": "京东自营 Figma专业版 年订阅 UI设计协作",
+      "price": 626.4,
+      "originalPrice": 814.32,
+      "commissionRate": 23.85,
+      "salesVolume": 2170,
+      "rating": 4.93,
+      "reviewCount": 5301,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/jd22uidesigntool/400/300",
+      "link": "https://union.jd.com/",
+      "couponAmount": 90,
+      "shopName": "京东自营",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 92.47,
+      "expectedRevenue": 149.4,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金23.85%，预期收益¥149.4",
+      "aiTags": [
+        "jd",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+2170销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "xhs-1792037261561-24-tpxii8",
+      "platform": "xhs",
+      "title": "小红书种草 4K视频素材包200GB 短视频剪辑商用授权",
+      "price": 325.91,
+      "originalPrice": 439.98,
+      "commissionRate": 35.23,
+      "salesVolume": 8502,
+      "rating": 4.81,
+      "reviewCount": 14062,
+      "category": "数字内容",
+      "imageUrl": "https://picsum.photos/seed/xhs24videofootage/400/300",
+      "link": "https://www.xiaohongshu.com/",
+      "couponAmount": 59,
+      "shopName": "小红书蒲公英",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 92.05,
+      "expectedRevenue": 114.82,
+      "aiCopy": "爆款推荐｜数字内容好物，佣金35.23%，预期收益¥114.82",
+      "aiTags": [
+        "xhs",
+        "数字内容",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+8502销量，转化预期佳",
+      "directionId": "digital-content"
+    },
+    {
+      "id": "douyin-1792037261261-29-evhvl7",
+      "platform": "douyin",
+      "title": "抖音爆款 Notion Plus个人版 年订阅 笔记知识库",
+      "price": 244.8,
+      "originalPrice": 328.03,
+      "commissionRate": 32.04,
+      "salesVolume": 7775,
+      "rating": 4.71,
+      "reviewCount": 13164,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/dy29notessaas/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 72,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.88,
+      "expectedRevenue": 78.43,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金32.04%，预期收益¥78.43",
+      "aiTags": [
+        "douyin",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+7775销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "douyin-1792037261260-0-ebvkr7",
+      "platform": "douyin",
+      "title": "抖音爆款 福昕PDF编辑器高级版 永久授权 商务办公",
+      "price": 379.05,
+      "originalPrice": 473.81,
+      "commissionRate": 32.62,
+      "salesVolume": 3452,
+      "rating": 4.58,
+      "reviewCount": 6483,
+      "category": "软件工具",
+      "imageUrl": "https://picsum.photos/seed/dy0pdfeditor/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 98,
+      "shopName": "抖音小店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.35,
+      "expectedRevenue": 123.65,
+      "aiCopy": "爆款推荐｜软件工具好物，佣金32.62%，预期收益¥123.65",
+      "aiTags": [
+        "douyin",
+        "软件工具",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+3452销量，转化预期佳",
+      "directionId": "software-tools"
+    },
+    {
+      "id": "douyin-1792037261261-27-skn5jv",
+      "platform": "douyin",
+      "title": "抖音爆款 4K高清投影仪 家庭影院 智能自动对焦",
+      "price": 1790.88,
+      "originalPrice": 2560.96,
+      "commissionRate": 18.84,
+      "salesVolume": 567,
+      "rating": 4.79,
+      "reviewCount": 1791,
+      "category": "数码电子",
+      "imageUrl": "https://picsum.photos/seed/dy27projector4k/400/300",
+      "link": "https://haohuo.jinritemai.com/",
+      "couponAmount": 116,
+      "shopName": "抖音小店",
+      "isVirtual": false,
+      "deliveryType": "physical",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.34,
+      "expectedRevenue": 337.4,
+      "aiCopy": "爆款推荐｜数码电子好物，佣金18.84%，预期收益¥337.4",
+      "aiTags": [
+        "douyin",
+        "数码电子",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+567销量，转化预期佳",
+      "directionId": "digital-electronics"
+    },
+    {
+      "id": "tbk-1792037260154-34-8j9ndc",
+      "platform": "taobao",
+      "title": "4K视频素材包200GB 短视频剪辑商用授权",
+      "price": 239.2,
+      "originalPrice": 425.78,
+      "commissionRate": 36.83,
+      "salesVolume": 7282,
+      "rating": 4.88,
+      "reviewCount": 7127,
+      "category": "数字内容",
+      "imageUrl": "https://picsum.photos/seed/tbk34videofootage/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 63,
+      "shopName": "视频素材库",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.3,
+      "expectedRevenue": 88.1,
+      "aiCopy": "爆款推荐｜数字内容好物，佣金36.83%，预期收益¥88.1",
+      "aiTags": [
+        "taobao",
+        "数字内容",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+7282销量，转化预期佳",
+      "directionId": "digital-content"
+    },
+    {
+      "id": "tbk-1792037260154-0-ebfqds",
+      "platform": "taobao",
+      "title": "福昕PDF编辑器高级版 永久授权 商务办公",
+      "price": 414.96,
+      "originalPrice": 647.34,
+      "commissionRate": 28.01,
+      "salesVolume": 3544,
+      "rating": 4.57,
+      "reviewCount": 6538,
+      "category": "软件工具",
+      "imageUrl": "https://picsum.photos/seed/tbk0pdfeditor/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 80,
+      "shopName": "福昕软件旗舰店",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.08,
+      "expectedRevenue": 116.23,
+      "aiCopy": "爆款推荐｜软件工具好物，佣金28.01%，预期收益¥116.23",
+      "aiTags": [
+        "taobao",
+        "软件工具",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+3544销量，转化预期佳",
+      "directionId": "software-tools"
+    },
+    {
+      "id": "pdd-1792037261112-4-rq4lwt",
+      "platform": "pdd",
+      "title": "拼多多百亿补贴 Notion Plus个人版 年订阅 笔记知识库",
+      "price": 250.56,
+      "originalPrice": 388.37,
+      "commissionRate": 29.24,
+      "salesVolume": 9230,
+      "rating": 4.77,
+      "reviewCount": 4391,
+      "category": "SaaS服务",
+      "imageUrl": "https://picsum.photos/seed/pdd4notessaas/400/300",
+      "link": "https://mobile.yangkeduo.com/",
+      "couponAmount": 65,
+      "shopName": "拼多多官方",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 91.02,
+      "expectedRevenue": 73.26,
+      "aiCopy": "爆款推荐｜SaaS服务好物，佣金29.24%，预期收益¥73.26",
+      "aiTags": [
+        "pdd",
+        "SaaS服务",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+9230销量，转化预期佳",
+      "directionId": "saas-services"
+    },
+    {
+      "id": "tbk-1792037260154-21-zu8dxp",
+      "platform": "taobao",
+      "title": "4K视频素材包200GB 短视频剪辑商用授权",
+      "price": 319.93,
+      "originalPrice": 531.08,
+      "commissionRate": 41.79,
+      "salesVolume": 5985,
+      "rating": 4.8,
+      "reviewCount": 6758,
+      "category": "数字内容",
+      "imageUrl": "https://picsum.photos/seed/tbk21videofootage/400/300",
+      "link": "https://pub.alimama.com/",
+      "couponAmount": 55,
+      "shopName": "视频素材库",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 90.77,
+      "expectedRevenue": 133.7,
+      "aiCopy": "爆款推荐｜数字内容好物，佣金41.79%，预期收益¥133.7",
+      "aiTags": [
+        "taobao",
+        "数字内容",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+5985销量，转化预期佳",
+      "directionId": "digital-content"
+    },
+    {
+      "id": "amz-1792037259529-11-7v0xgp",
+      "platform": "amazon",
+      "title": "UI/UX设计师就业班 Figma+作品集",
+      "price": 146.14,
+      "originalPrice": 195.83,
+      "commissionRate": 31.82,
+      "salesVolume": 9049,
+      "rating": 4.74,
+      "reviewCount": 14174,
+      "category": "在线课程",
+      "imageUrl": "https://picsum.photos/seed/amz11designcourse/400/300",
+      "link": "https://www.amazon.com/",
+      "couponAmount": 329,
+      "shopName": "Amazon",
+      "isVirtual": true,
+      "deliveryType": "digital",
+      "meta": {
+        "source": "mock"
+      },
+      "score": 90.47,
+      "expectedRevenue": 46.5,
+      "aiCopy": "爆款推荐｜在线课程好物，佣金31.82%，预期收益$46.5",
+      "aiTags": [
+        "amazon",
+        "在线课程",
+        "有券",
+        "精选"
+      ],
+      "reason": "高佣金+9049销量，转化预期佳",
+      "directionId": "online-courses"
+    }
+  ],
+  "totalCount": 153,
+  "avgScore": 82.31,
+  "totalExpectedRevenue": 11295.8
+}
