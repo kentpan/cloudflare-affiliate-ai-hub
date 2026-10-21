@@ -1,0 +1,467 @@
+[
+  {
+    "id": "gg-1792555952070-22-v59a5g",
+    "platform": "google",
+    "title": "京东PLUS会员年卡 京豆+免邮+专属价",
+    "price": 25.45,
+    "originalPrice": 28.25,
+    "commissionRate": 4.99,
+    "salesVolume": 26649,
+    "rating": 4.91,
+    "reviewCount": 58058,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg22membershipcard/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 64.23,
+    "expectedRevenue": 1.27,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金4.99%，预期收益$1.27",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+26649销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1792555952070-5-82wjov",
+    "platform": "google",
+    "title": "京东E卡500元 自用送礼皆宜 不记名",
+    "price": 85.42,
+    "originalPrice": 94.82,
+    "commissionRate": 3.71,
+    "salesVolume": 8653,
+    "rating": 4.96,
+    "reviewCount": 22277,
+    "category": "点卡充值",
+    "imageUrl": "https://picsum.photos/seed/gg5giftcard/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 63.74,
+    "expectedRevenue": 3.17,
+    "aiCopy": "爆款推荐｜点卡充值好物，佣金3.71%，预期收益$3.17",
+    "aiTags": [
+      "google",
+      "点卡充值",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+8653销量，转化预期佳",
+    "directionId": "points-cards"
+  },
+  {
+    "id": "gg-1792555952070-13-nlj8c2",
+    "platform": "google",
+    "title": "京东PLUS会员年卡 京豆+免邮+专属价",
+    "price": 24.63,
+    "originalPrice": 30.05,
+    "commissionRate": 3.84,
+    "salesVolume": 16288,
+    "rating": 4.91,
+    "reviewCount": 23260,
+    "category": "会员点卡",
+    "imageUrl": "https://picsum.photos/seed/gg13membershipcard/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 61.73,
+    "expectedRevenue": 0.95,
+    "aiCopy": "爆款推荐｜会员点卡好物，佣金3.84%，预期收益$0.95",
+    "aiTags": [
+      "google",
+      "会员点卡",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+16288销量，转化预期佳",
+    "directionId": "membership-cards"
+  },
+  {
+    "id": "gg-1792555952070-6-nrm4rn",
+    "platform": "google",
+    "title": "Q币充值100个 QQ钱包即时到账",
+    "price": 17.78,
+    "originalPrice": 21.51,
+    "commissionRate": 5.03,
+    "salesVolume": 21637,
+    "rating": 4.68,
+    "reviewCount": 29911,
+    "category": "点卡充值",
+    "imageUrl": "https://picsum.photos/seed/gg6qcoin/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 61.4,
+    "expectedRevenue": 0.89,
+    "aiCopy": "爆款推荐｜点卡充值好物，佣金5.03%，预期收益$0.89",
+    "aiTags": [
+      "google",
+      "点卡充值",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+21637销量，转化预期佳",
+    "directionId": "points-cards"
+  },
+  {
+    "id": "gg-1792555952070-7-mjbu50",
+    "platform": "google",
+    "title": "儿童学习桌椅可升降 防近视矫姿",
+    "price": 191.04,
+    "originalPrice": 210.14,
+    "commissionRate": 5.12,
+    "salesVolume": 706,
+    "rating": 4.69,
+    "reviewCount": 875,
+    "category": "母婴玩具",
+    "imageUrl": "https://picsum.photos/seed/gg7kidsstudydesk/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 58.64,
+    "expectedRevenue": 9.78,
+    "aiCopy": "爆款推荐｜母婴玩具好物，佣金5.12%，预期收益$9.78",
+    "aiTags": [
+      "google",
+      "母婴玩具",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+706销量，转化预期佳",
+    "directionId": "mother-baby"
+  },
+  {
+    "id": "gg-1792555952070-14-v3hacc",
+    "platform": "google",
+    "title": "智能手表运动健康监测 心率血氧 GPS 长续航",
+    "price": 101.36,
+    "originalPrice": 111.5,
+    "commissionRate": 6.81,
+    "salesVolume": 1151,
+    "rating": 4.51,
+    "reviewCount": 777,
+    "category": "数码电子",
+    "imageUrl": "https://picsum.photos/seed/gg14smartwatch/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.81,
+    "expectedRevenue": 6.9,
+    "aiCopy": "爆款推荐｜数码电子好物，佣金6.81%，预期收益$6.9",
+    "aiTags": [
+      "google",
+      "数码电子",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+1151销量，转化预期佳",
+    "directionId": "digital-electronics"
+  },
+  {
+    "id": "gg-1792555952070-8-umcbxb",
+    "platform": "google",
+    "title": "益生菌粉冲剂 肠道调理 30袋装",
+    "price": 25.62,
+    "originalPrice": 28.69,
+    "commissionRate": 5.25,
+    "salesVolume": 4436,
+    "rating": 4.8,
+    "reviewCount": 6107,
+    "category": "食品保健",
+    "imageUrl": "https://picsum.photos/seed/gg8probioticpowder/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.63,
+    "expectedRevenue": 1.35,
+    "aiCopy": "爆款推荐｜食品保健好物，佣金5.25%，预期收益$1.35",
+    "aiTags": [
+      "google",
+      "食品保健",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+4436销量，转化预期佳",
+    "directionId": "food-health"
+  },
+  {
+    "id": "gg-1792555952070-1-ok12qq",
+    "platform": "google",
+    "title": "便携式榨汁机 USB充电 随行杯果汁机",
+    "price": 21.73,
+    "originalPrice": 24.55,
+    "commissionRate": 6.98,
+    "salesVolume": 4909,
+    "rating": 4.57,
+    "reviewCount": 8111,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg1portablejuicer/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.2,
+    "expectedRevenue": 1.52,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金6.98%，预期收益$1.52",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+4909销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1792555952070-11-4ncy1g",
+    "platform": "google",
+    "title": "空气炸锅家用无油 5.5L大容量 智能预设菜单",
+    "price": 50.72,
+    "originalPrice": 62.89,
+    "commissionRate": 3.71,
+    "salesVolume": 2450,
+    "rating": 4.73,
+    "reviewCount": 1592,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg11airfryer/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 56.28,
+    "expectedRevenue": 1.88,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金3.71%，预期收益$1.88",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2450销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1792555952070-17-quq7gv",
+    "platform": "google",
+    "title": "破壁机家用静音 加热多功能辅食料理",
+    "price": 110.2,
+    "originalPrice": 134.44,
+    "commissionRate": 5.4,
+    "salesVolume": 703,
+    "rating": 4.62,
+    "reviewCount": 454,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg17blenderkitchen/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.98,
+    "expectedRevenue": 5.95,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金5.4%，预期收益$5.95",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+703销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1792555952070-16-xmgvt2",
+    "platform": "google",
+    "title": "Notion Plus个人版 年订阅 笔记知识库",
+    "price": 62.8,
+    "originalPrice": 77.24,
+    "commissionRate": 3.9,
+    "salesVolume": 1369,
+    "rating": 4.87,
+    "reviewCount": 4699,
+    "category": "SaaS服务",
+    "imageUrl": "https://picsum.photos/seed/gg16notessaas/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.9,
+    "expectedRevenue": 2.45,
+    "aiCopy": "爆款推荐｜SaaS服务好物，佣金3.9%，预期收益$2.45",
+    "aiTags": [
+      "google",
+      "SaaS服务",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+1369销量，转化预期佳",
+    "directionId": "saas-services"
+  },
+  {
+    "id": "gg-1792555952070-15-8ggplc",
+    "platform": "google",
+    "title": "便携式榨汁机 USB充电 随行杯果汁机",
+    "price": 15.68,
+    "originalPrice": 18.97,
+    "commissionRate": 5.32,
+    "salesVolume": 5485,
+    "rating": 4.54,
+    "reviewCount": 5927,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg15portablejuicer/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.76,
+    "expectedRevenue": 0.83,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金5.32%，预期收益$0.83",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+5485销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1792555952070-12-i1rcc5",
+    "platform": "google",
+    "title": "电动牙刷声波震动 USB充电 五档模式",
+    "price": 24.55,
+    "originalPrice": 30.69,
+    "commissionRate": 6.47,
+    "salesVolume": 2815,
+    "rating": 4.63,
+    "reviewCount": 6688,
+    "category": "美妆个护",
+    "imageUrl": "https://picsum.photos/seed/gg12electrictoothbrush/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.71,
+    "expectedRevenue": 1.59,
+    "aiCopy": "爆款推荐｜美妆个护好物，佣金6.47%，预期收益$1.59",
+    "aiTags": [
+      "google",
+      "美妆个护",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2815销量，转化预期佳",
+    "directionId": "beauty-care"
+  },
+  {
+    "id": "gg-1792555952070-0-nv3rix",
+    "platform": "google",
+    "title": "益生菌粉冲剂 肠道调理 30袋装",
+    "price": 25.98,
+    "originalPrice": 28.84,
+    "commissionRate": 5.52,
+    "salesVolume": 2165,
+    "rating": 4.78,
+    "reviewCount": 1652,
+    "category": "食品保健",
+    "imageUrl": "https://picsum.photos/seed/gg0probioticpowder/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.21,
+    "expectedRevenue": 1.43,
+    "aiCopy": "爆款推荐｜食品保健好物，佣金5.52%，预期收益$1.43",
+    "aiTags": [
+      "google",
+      "食品保健",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2165销量，转化预期佳",
+    "directionId": "food-health"
+  },
+  {
+    "id": "gg-1792555952070-18-1yjfa0",
+    "platform": "google",
+    "title": "坚果零食大礼包 每日坚果 混合装30包",
+    "price": 19.53,
+    "originalPrice": 24.02,
+    "commissionRate": 3.74,
+    "salesVolume": 4267,
+    "rating": 4.66,
+    "reviewCount": 10048,
+    "category": "食品保健",
+    "imageUrl": "https://picsum.photos/seed/gg18mixednutssnack/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.2,
+    "expectedRevenue": 0.73,
+    "aiCopy": "爆款推荐｜食品保健好物，佣金3.74%，预期收益$0.73",
+    "aiTags": [
+      "google",
+      "食品保健",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+4267销量，转化预期佳",
+    "directionId": "food-health"
+  }
+]
