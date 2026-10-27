@@ -1,0 +1,467 @@
+[
+  {
+    "id": "gg-1793075537405-12-m8mh2m",
+    "platform": "google",
+    "title": "4K视频素材包200GB 短视频剪辑商用授权",
+    "price": 60.22,
+    "originalPrice": 77.08,
+    "commissionRate": 6.2,
+    "salesVolume": 3255,
+    "rating": 4.84,
+    "reviewCount": 2941,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg12videofootage/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.4,
+    "expectedRevenue": 3.73,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金6.2%，预期收益$3.73",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+3255销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1793075537405-10-hwd4s8",
+    "platform": "google",
+    "title": "儿童学习桌椅可升降 防近视矫姿",
+    "price": 193.53,
+    "originalPrice": 228.37,
+    "commissionRate": 6.62,
+    "salesVolume": 733,
+    "rating": 4.75,
+    "reviewCount": 1432,
+    "category": "母婴玩具",
+    "imageUrl": "https://picsum.photos/seed/gg10kidsstudydesk/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 60.36,
+    "expectedRevenue": 12.81,
+    "aiCopy": "爆款推荐｜母婴玩具好物，佣金6.62%，预期收益$12.81",
+    "aiTags": [
+      "google",
+      "母婴玩具",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+733销量，转化预期佳",
+    "directionId": "mother-baby"
+  },
+  {
+    "id": "gg-1793075537405-16-htycyj",
+    "platform": "google",
+    "title": "4K视频素材包200GB 短视频剪辑商用授权",
+    "price": 64.78,
+    "originalPrice": 79.03,
+    "commissionRate": 4.7,
+    "salesVolume": 3127,
+    "rating": 4.88,
+    "reviewCount": 7434,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg16videofootage/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 59.64,
+    "expectedRevenue": 3.04,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金4.7%，预期收益$3.04",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+3127销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1793075537405-9-1ixab4",
+    "platform": "google",
+    "title": "商用字体合集500款 设计师必备版权无忧",
+    "price": 32.68,
+    "originalPrice": 41.83,
+    "commissionRate": 6.34,
+    "salesVolume": 5184,
+    "rating": 4.79,
+    "reviewCount": 11589,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg9fontdesign/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 59.51,
+    "expectedRevenue": 2.07,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金6.34%，预期收益$2.07",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+5184销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1793075537405-20-140oad",
+    "platform": "google",
+    "title": "蓝山挂耳咖啡 10g×20片 新鲜烘焙",
+    "price": 10.82,
+    "originalPrice": 12.88,
+    "commissionRate": 5.45,
+    "salesVolume": 9077,
+    "rating": 4.77,
+    "reviewCount": 12715,
+    "category": "食品保健",
+    "imageUrl": "https://picsum.photos/seed/gg20dripcoffee/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.93,
+    "expectedRevenue": 0.59,
+    "aiCopy": "爆款推荐｜食品保健好物，佣金5.45%，预期收益$0.59",
+    "aiTags": [
+      "google",
+      "食品保健",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+9077销量，转化预期佳",
+    "directionId": "food-health"
+  },
+  {
+    "id": "gg-1793075537404-0-yji9gc",
+    "platform": "google",
+    "title": "机械键盘客制化 热插拔 RGB 三模无线",
+    "price": 79.96,
+    "originalPrice": 89.56,
+    "commissionRate": 6.45,
+    "salesVolume": 1151,
+    "rating": 4.79,
+    "reviewCount": 669,
+    "category": "数码电子",
+    "imageUrl": "https://picsum.photos/seed/gg0mechanicalkeyboard/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.92,
+    "expectedRevenue": 5.16,
+    "aiCopy": "爆款推荐｜数码电子好物，佣金6.45%，预期收益$5.16",
+    "aiTags": [
+      "google",
+      "数码电子",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+1151销量，转化预期佳",
+    "directionId": "digital-electronics"
+  },
+  {
+    "id": "gg-1793075537405-8-zawfdb",
+    "platform": "google",
+    "title": "空气炸锅家用无油 5.5L大容量 智能预设菜单",
+    "price": 69.46,
+    "originalPrice": 84.05,
+    "commissionRate": 4.59,
+    "salesVolume": 2119,
+    "rating": 4.75,
+    "reviewCount": 4502,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg8airfryer/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.83,
+    "expectedRevenue": 3.19,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金4.59%，预期收益$3.19",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2119销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1793075537405-22-ih62jm",
+    "platform": "google",
+    "title": "Kindle电子书畅销榜合集 1000本精装",
+    "price": 21.18,
+    "originalPrice": 25.42,
+    "commissionRate": 4.55,
+    "salesVolume": 7347,
+    "rating": 4.67,
+    "reviewCount": 6682,
+    "category": "数字内容",
+    "imageUrl": "https://picsum.photos/seed/gg22ebook/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": true,
+    "deliveryType": "digital",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 57.79,
+    "expectedRevenue": 0.96,
+    "aiCopy": "爆款推荐｜数字内容好物，佣金4.55%，预期收益$0.96",
+    "aiTags": [
+      "google",
+      "数字内容",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+7347销量，转化预期佳",
+    "directionId": "digital-content"
+  },
+  {
+    "id": "gg-1793075537405-19-mo6iu2",
+    "platform": "google",
+    "title": "便携式榨汁机 USB充电 随行杯果汁机",
+    "price": 21.86,
+    "originalPrice": 24.7,
+    "commissionRate": 5.57,
+    "salesVolume": 5056,
+    "rating": 4.59,
+    "reviewCount": 1472,
+    "category": "厨房小电",
+    "imageUrl": "https://picsum.photos/seed/gg19portablejuicer/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 56.74,
+    "expectedRevenue": 1.22,
+    "aiCopy": "爆款推荐｜厨房小电好物，佣金5.57%，预期收益$1.22",
+    "aiTags": [
+      "google",
+      "厨房小电",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+5056销量，转化预期佳",
+    "directionId": "kitchen-appliances"
+  },
+  {
+    "id": "gg-1793075537405-17-n0sn11",
+    "platform": "google",
+    "title": "4K高清投影仪 家庭影院 智能自动对焦",
+    "price": 295.37,
+    "originalPrice": 327.86,
+    "commissionRate": 3.29,
+    "salesVolume": 400,
+    "rating": 4.66,
+    "reviewCount": 326,
+    "category": "数码电子",
+    "imageUrl": "https://picsum.photos/seed/gg17projector4k/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 56.49,
+    "expectedRevenue": 9.72,
+    "aiCopy": "爆款推荐｜数码电子好物，佣金3.29%，预期收益$9.72",
+    "aiTags": [
+      "google",
+      "数码电子",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+400销量，转化预期佳",
+    "directionId": "digital-electronics"
+  },
+  {
+    "id": "gg-1793075537405-18-498x6s",
+    "platform": "google",
+    "title": "儿童学习桌椅可升降 防近视矫姿",
+    "price": 166.07,
+    "originalPrice": 182.68,
+    "commissionRate": 5.01,
+    "salesVolume": 400,
+    "rating": 4.76,
+    "reviewCount": 782,
+    "category": "母婴玩具",
+    "imageUrl": "https://picsum.photos/seed/gg18kidsstudydesk/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 56.26,
+    "expectedRevenue": 8.32,
+    "aiCopy": "爆款推荐｜母婴玩具好物，佣金5.01%，预期收益$8.32",
+    "aiTags": [
+      "google",
+      "母婴玩具",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+400销量，转化预期佳",
+    "directionId": "mother-baby"
+  },
+  {
+    "id": "gg-1793075537405-6-gu7bzx",
+    "platform": "google",
+    "title": "儿童学习桌椅可升降 防近视矫姿",
+    "price": 171.06,
+    "originalPrice": 206.98,
+    "commissionRate": 5.11,
+    "salesVolume": 459,
+    "rating": 4.51,
+    "reviewCount": 823,
+    "category": "母婴玩具",
+    "imageUrl": "https://picsum.photos/seed/gg6kidsstudydesk/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.71,
+    "expectedRevenue": 8.74,
+    "aiCopy": "爆款推荐｜母婴玩具好物，佣金5.11%，预期收益$8.74",
+    "aiTags": [
+      "google",
+      "母婴玩具",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+459销量，转化预期佳",
+    "directionId": "mother-baby"
+  },
+  {
+    "id": "gg-1793075537405-1-igyo4h",
+    "platform": "google",
+    "title": "婴儿纸尿裤超薄透气 S-XL全码 整箱装",
+    "price": 34,
+    "originalPrice": 41.14,
+    "commissionRate": 4.61,
+    "salesVolume": 1980,
+    "rating": 4.77,
+    "reviewCount": 10480,
+    "category": "母婴玩具",
+    "imageUrl": "https://picsum.photos/seed/gg1babydiapers/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 55.14,
+    "expectedRevenue": 1.57,
+    "aiCopy": "爆款推荐｜母婴玩具好物，佣金4.61%，预期收益$1.57",
+    "aiTags": [
+      "google",
+      "母婴玩具",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+1980销量，转化预期佳",
+    "directionId": "mother-baby"
+  },
+  {
+    "id": "gg-1793075537405-24-r6rg66",
+    "platform": "google",
+    "title": "便携式移动电源 20000mAh PD快充 数显",
+    "price": 23.47,
+    "originalPrice": 28.16,
+    "commissionRate": 6.09,
+    "salesVolume": 2097,
+    "rating": 4.73,
+    "reviewCount": 7267,
+    "category": "数码电子",
+    "imageUrl": "https://picsum.photos/seed/gg24powerbank/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 54.85,
+    "expectedRevenue": 1.43,
+    "aiCopy": "爆款推荐｜数码电子好物，佣金6.09%，预期收益$1.43",
+    "aiTags": [
+      "google",
+      "数码电子",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2097销量，转化预期佳",
+    "directionId": "digital-electronics"
+  },
+  {
+    "id": "gg-1793075537405-13-h6lb9o",
+    "platform": "google",
+    "title": "氨基酸洁面乳 温和清洁 控油祛痘 100g",
+    "price": 13.99,
+    "originalPrice": 15.95,
+    "commissionRate": 5.11,
+    "salesVolume": 2900,
+    "rating": 4.79,
+    "reviewCount": 2723,
+    "category": "美妆个护",
+    "imageUrl": "https://picsum.photos/seed/gg13facialcleanser/400/300",
+    "link": "https://shopping.google.com/",
+    "shopName": "Google Shopping",
+    "isVirtual": false,
+    "deliveryType": "physical",
+    "meta": {
+      "source": "mock"
+    },
+    "score": 54.45,
+    "expectedRevenue": 0.71,
+    "aiCopy": "爆款推荐｜美妆个护好物，佣金5.11%，预期收益$0.71",
+    "aiTags": [
+      "google",
+      "美妆个护",
+      "热销",
+      "精选"
+    ],
+    "reason": "高佣金+2900销量，转化预期佳",
+    "directionId": "beauty-care"
+  }
+]
